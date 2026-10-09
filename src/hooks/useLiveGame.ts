@@ -59,11 +59,14 @@ export function useLiveGame(gameId: string | null): LiveState {
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const reload = useCallback(() => setTick((t) => t + 1), []);
+  // Solo la primera carga muestra "Cargando…". Las recargas por realtime
+  // actualizan en silencio para no hacer titilar la pantalla.
+  const firstLoad = useRef(true);
 
   useEffect(() => {
     if (!gameId) { setLoading(false); return; }
     let cancelled = false;
-    setLoading(true);
+    if (firstLoad.current) setLoading(true);
     (async () => {
       try {
         const [g, t, lb, a] = await Promise.all([
@@ -75,9 +78,12 @@ export function useLiveGame(gameId: string | null): LiveState {
         setQuestion(await publicQuestion(g?.currentQuestionId ?? null));
         setError(null);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Error de conexión.');
+        if (!cancelled && firstLoad.current) setError(e instanceof Error ? e.message : 'Error de conexión.');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && firstLoad.current) {
+          setLoading(false);
+          firstLoad.current = false;
+        }
       }
     })();
     return () => { cancelled = true; };
