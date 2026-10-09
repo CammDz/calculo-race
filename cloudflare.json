@@ -1,0 +1,5 @@
+{
+  "name": "calculo-race",
+  "build": { "command": "npm run build", "output": "dist" },
+  "functions": null
+}

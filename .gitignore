@@ -1,0 +1,17 @@
+# Cálculo Race — dependencias
+node_modules/
+dist/
+.env
+.env.local
+*.local
+
+# Vite
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+supabase/.temp/
