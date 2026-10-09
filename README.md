@@ -1,6 +1,6 @@
 # Cálculo Race — Resuelve, avanza y conquista la carrera
 
-Carrera matemática multijugador (6–10 equipos) para clases de cálculo multivariable: límites, coordenadas polares, regla de L'Hôpital y un problema final. Cada equipo pilota una nave desde su celular; las respuestas correctas la hacen avanzar. Partida de **15:00 exactos** con cronómetro de servidor, puntuación validada en backend y clasificación en tiempo real.
+Carrera matemática multijugador (2–10 equipos) para clases de cálculo multivariable: límites, coordenadas polares, regla de L'Hôpital y un problema final. Cada equipo pilota una nave desde su celular; las respuestas correctas la hacen avanzar. Partida de **15:00 exactos** con cronómetro de servidor, puntuación validada en backend y clasificación en tiempo real.
 
 ## Tecnologías
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, LogOut, History, PlayCircle } from 'lucide-react';
+import { Plus, LogOut, History, PlayCircle, Copy } from 'lucide-react';
 import { useTeacherAuth } from '../hooks/useTeacherAuth';
 import { createGame, listTeacherGames } from '../services/gameService';
 import type { Game, LevelNumber } from '../types';
@@ -41,6 +41,26 @@ export function TeacherDashboardPage() {
     }
   }
 
+  /** Duplicar: nueva partida reutilizando la configuración de una anterior. */
+  async function onDuplicate(g: Game) {
+    if (!user || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const fresh = await createGame({
+        maxTeams: g.maxTeams,
+        points: { 1: g.pointsL1, 2: g.pointsL2, 3: g.pointsL3, 4: g.pointsL4 },
+        showExplanations: g.showExplanations,
+        teacherId: user.id,
+      });
+      navigate(`/admin/partida/${fresh.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo duplicar la partida.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) return <section className="card"><p>Verificando sesión…</p></section>;
   if (!user) return null;
 
@@ -52,10 +72,10 @@ export function TeacherDashboardPage() {
           <button className="btn ghost small" onClick={() => signOut().then(() => navigate('/'))}><LogOut size={16} /> Salir</button>
         </div>
         <form onSubmit={onCreate} className="mt">
-          <h3><Plus size={18} /> Nueva partida (6–10 equipos)</h3>
+          <h3><Plus size={18} /> Nueva partida (2–10 equipos)</h3>
           <div className="field">
             <label htmlFor="max">Máximo de equipos</label>
-            <input id="max" className="input" type="number" min={6} max={10} value={maxTeams} onChange={(e) => setMaxTeams(Math.max(6, Math.min(10, Number(e.target.value))))} />
+            <input id="max" className="input" type="number" min={2} max={10} value={maxTeams} onChange={(e) => setMaxTeams(Math.max(2, Math.min(10, Number(e.target.value))))} />
           </div>
           <div className="grid two">
             {([1, 2, 3, 4] as LevelNumber[]).map((l) => (
@@ -83,7 +103,14 @@ export function TeacherDashboardPage() {
                     <td><strong>{g.code}</strong></td>
                     <td>{g.status}</td>
                     <td>{g.currentLevel}</td>
-                    <td><Link className="btn secondary small" to={`/admin/partida/${g.id}`}>Controlar</Link></td>
+                    <td>
+                      <span className="row">
+                        <Link className="btn secondary small" to={`/admin/partida/${g.id}`}>Controlar</Link>
+                        <button className="btn ghost small" disabled={busy} onClick={() => onDuplicate(g)} title="Crear una partida nueva con esta misma configuración">
+                          <Copy size={14} /> Duplicar
+                        </button>
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

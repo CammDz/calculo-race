@@ -13,7 +13,7 @@ export function HomePage() {
         </div>
         <h1>Cálculo <span>Race</span></h1>
         <p><strong style={{ color: 'var(--text)' }}>Resuelve, avanza y conquista la carrera.</strong></p>
-        <p>Carrera matemática multijugador de 6 a 10 equipos: límites, polares, L&apos;Hôpital y un problema final. 15 minutos, una nave por equipo.</p>
+        <p>Carrera matemática multijugador de 2 a 10 equipos: límites, polares, L&apos;Hôpital y un problema final. 15 minutos, una nave por equipo.</p>
         <div className="grid two mt">
           <Link to="/unirse" className="btn" aria-label="Ingresar a una partida"><Play size={20} /> Ingresar a una partida</Link>
           <Link to="/admin" className="btn secondary" aria-label="Acceso del profesor"><GraduationCap size={20} /> Soy profesor</Link>

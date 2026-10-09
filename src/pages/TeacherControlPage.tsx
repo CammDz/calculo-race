@@ -58,6 +58,29 @@ export function TeacherControlPage() {
     return { ok: mine.filter((a) => a.isCorrect).length, total: live.teams.length, sent: mine.length };
   }, [live.answers, live.game?.currentQuestionId, live.teams.length]);
 
+  const correctId = QUESTIONS.find((x) => x.id === live.question?.id)?.correctOptionId ?? '';
+
+  /** Respuesta de cada equipo a la pregunta actual, ordenada por nombre. */
+  const teamAnswers = useMemo(() => {
+    const qid = live.game?.currentQuestionId;
+    return [...live.teams]
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+      .map((t) => ({
+        team: t,
+        answer: qid ? live.answers.find((x) => x.questionId === qid && x.teamId === t.id) ?? null : null,
+      }));
+  }, [live.teams, live.answers, live.game?.currentQuestionId]);
+
+  /** Conteo de votos por opción + sin responder. */
+  const votes = useMemo(() => {
+    const v: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, none: 0 };
+    for (const r of teamAnswers) {
+      if (!r.answer) v.none += 1;
+      else if (r.answer.selectedOptionId in v) v[r.answer.selectedOptionId] += 1;
+    }
+    return v;
+  }, [teamAnswers]);
+
   async function act(label: string, fn: () => Promise<unknown>) {
     setBusy(label);
     setError(null);
@@ -154,6 +177,64 @@ export function TeacherControlPage() {
             <p className="hint">Correctas/incorrectas en vivo: {answeredCount.ok} ✓ / {(answeredCount.sent ?? 0) - answeredCount.ok} ✗ de {answeredCount.sent} enviadas.</p>
           </>
         ) : <p className="hint">Sin pregunta publicada.</p>}
+      </section>
+
+      <section className="card">
+        <div className="row space-between">
+          <h3>Respuestas por equipo {g.currentQuestionId ? `(${g.currentQuestionId} · correcta: ${correctId})` : ''}</h3>
+          <button
+            className="btn secondary small"
+            disabled={teamAnswers.length === 0}
+            onClick={() => downloadCsv(
+              `calculo-race-${g.code}-respuestas-${g.currentQuestionId ?? 'na'}.csv`,
+              teamAnswers.map((r) => ({
+                equipo: r.team.name,
+                pregunta: g.currentQuestionId ?? '',
+                marcada: r.answer?.selectedOptionId ?? 'sin respuesta',
+                correcta: r.answer ? (r.answer.isCorrect ? 'sí' : 'no') : '',
+                puntos: r.answer?.pointsAwarded ?? 0,
+                tiempo_ms: r.answer?.responseTimeMs ?? '',
+              })),
+            )}
+          >
+            <Download size={16} /> CSV respuestas
+          </button>
+        </div>
+        <div className="row mt" aria-label="Votos por opción">
+          {(['A', 'B', 'C', 'D'] as const).map((o) => (
+            <span key={o} className="badge blue" style={o === correctId ? { borderColor: 'var(--green)', color: '#b8f4dc' } : undefined}>
+              {o}: {votes[o]}{o === correctId ? ' ✓' : ''}
+            </span>
+          ))}
+          <span className="badge">Sin responder: {votes.none}</span>
+        </div>
+        {teamAnswers.length === 0 ? <p className="hint mt">Aún no hay equipos.</p> : (
+          <div className="table-wrap mt">
+            <table className="table" aria-label="Respuestas por equipo">
+              <thead><tr><th>Equipo</th><th>Marcó</th><th>Estado</th><th>Pts</th><th>Tiempo</th></tr></thead>
+              <tbody>
+                {teamAnswers.map((r) => (
+                  <tr key={r.team.id}>
+                    <td>
+                      <span className="row" style={{ gap: 6 }}>
+                        <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 6, background: r.team.shipColor, display: 'inline-block' }} />
+                        {r.team.name}
+                      </span>
+                    </td>
+                    <td><strong>{r.answer?.selectedOptionId ?? '—'}</strong></td>
+                    <td>
+                      {!r.answer ? <span className="hint">sin respuesta</span>
+                        : r.answer.isCorrect ? <span style={{ color: 'var(--green)', fontWeight: 800 }}>✓ correcta</span>
+                        : <span style={{ color: '#ffc9c9', fontWeight: 800 }}>✗ incorrecta</span>}
+                    </td>
+                    <td>{r.answer?.pointsAwarded ?? 0}</td>
+                    <td>{r.answer ? `${(r.answer.responseTimeMs / 1000).toFixed(1)}s` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="card">
