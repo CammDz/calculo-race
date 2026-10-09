@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { getSupabase, DEMO_MODE } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 
 export interface TeacherUser {
   id: string;
   email: string;
 }
 
-/** Auth del profesor con Supabase Auth; en demo local usa sesión ficticia claramente marcada. */
+/** Auth del profesor con Supabase Auth. */
 export function useTeacherAuth() {
   const [user, setUser] = useState<TeacherUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -14,12 +14,6 @@ export function useTeacherAuth() {
   useEffect(() => {
     const sb = getSupabase();
     if (!sb) {
-      try {
-        const raw = localStorage.getItem('cr-teacher');
-        setUser(raw ? (JSON.parse(raw) as TeacherUser) : null);
-      } catch {
-        setUser(null);
-      }
       setLoading(false);
       return;
     }
@@ -37,13 +31,7 @@ export function useTeacherAuth() {
 
   async function signIn(email: string, password: string): Promise<string | null> {
     const sb = getSupabase();
-    if (!sb) {
-      if (!email.includes('@') || password.length < 4) return 'Revisa tu correo y contraseña.';
-      const demo = { id: 'demo-teacher', email };
-      localStorage.setItem('cr-teacher', JSON.stringify(demo));
-      setUser(demo);
-      return null;
-    }
+    if (!sb) return 'Servicio no disponible. Intenta de nuevo en unos minutos.';
     const { error } = await sb.auth.signInWithPassword({ email, password });
     return error ? 'Credenciales inválidas o cuenta inexistente.' : null;
   }
@@ -51,7 +39,6 @@ export function useTeacherAuth() {
   async function signOut(): Promise<void> {
     const sb = getSupabase();
     if (!sb) {
-      localStorage.removeItem('cr-teacher');
       setUser(null);
       return;
     }
@@ -59,5 +46,5 @@ export function useTeacherAuth() {
     setUser(null);
   }
 
-  return { user, loading, signIn, signOut, demoMode: DEMO_MODE };
+  return { user, loading, signIn, signOut };
 }

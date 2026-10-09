@@ -1,22 +1,24 @@
-// Cliente Supabase + detección de modo demo.
-// Si faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY, la app funciona en
-// MODO DEMO LOCAL (sin red), claramente identificado en la UI.
+// Cliente Supabase (backend único y obligatorio).
+// Sin VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY la app muestra un error
+// claro de configuración en lugar de arrancar en un modo degradado.
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-const PLACEHOLDER_URL = !url || url.includes('tu-proyecto') || url.trim() === '';
-const PLACEHOLDER_KEY = !anonKey || anonKey.includes('ficticia') || anonKey.trim() === '';
+const MISSING =
+  !url || url.includes('tu-proyecto') || url.trim() === '' ||
+  !anonKey || anonKey.includes('ficticia') || anonKey.trim() === '';
 
-export const DEMO_MODE = PLACEHOLDER_URL || PLACEHOLDER_KEY;
-export const ENV_MISSING = DEMO_MODE;
+export function isBackendConfigured(): boolean {
+  return !MISSING;
+}
 
 let client: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient | null {
-  if (DEMO_MODE) return null;
+  if (MISSING) return null;
   if (client) return client;
   client = createClient(url as string, anonKey as string, {
     auth: { persistSession: true, autoRefreshToken: true },
@@ -25,9 +27,9 @@ export function getSupabase(): SupabaseClient | null {
   return client;
 }
 
-export function envStatusMessage(): string {
-  if (DEMO_MODE) {
-    return 'Modo demo local: configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY para multijugador real.';
-  }
-  return 'Conectado a Supabase.';
+/** Obtiene el cliente o lanza un error legible para el usuario final. */
+export function requireSupabase(): SupabaseClient {
+  const sb = getSupabase();
+  if (!sb) throw new Error('Servicio no disponible. Intenta de nuevo en unos minutos.');
+  return sb;
 }

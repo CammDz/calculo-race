@@ -9,7 +9,7 @@ import { Ship } from '../components/Ship';
 export function JoinPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const [code, setCode] = useState(params.get('codigo') ?? 'DEMO01');
+  const [code, setCode] = useState(params.get('codigo') ?? '');
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>(SHIP_COLORS[1]);
   const [error, setError] = useState<string | null>(null);

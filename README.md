@@ -24,7 +24,7 @@ npm run preview  # sirve dist/ localmente
 npm test         # ejecuta las 27 pruebas (vitest run)
 ```
 
-Sin credenciales de Supabase la app arranca en **MODO DEMO LOCAL** (badge visible): los datos viven en `localStorage` y puedes probar con el código `DEMO01`. Para multijugador real configura `.env` a partir de `.env.example`.
+Configura `.env` a partir de `.env.example` con las credenciales de tu proyecto Supabase (obligatorias).
 
 ## Supabase: crear proyecto, migraciones y profesor
 
@@ -47,7 +47,7 @@ Copia `.env.example` a `.env`:
 | `VITE_SUPABASE_URL` | Supabase → Project Settings → API | Cliente web (pública, protegida por RLS) |
 | `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API | Cliente web (pública, protegida por RLS) |
 
-La `service_role` **solo** vive como secreto del servidor (`supabase secrets set ...`), jamás en el frontend ni en Cloudflare Pages. Si faltan variables, la app lo indica con el badge MODO DEMO sin exponer secretos.
+La `service_role` **solo** vive como secreto del servidor (`supabase secrets set ...`), jamás en el frontend ni en Cloudflare Pages. Sin variables configuradas, la app muestra un mensaje de "Servicio no disponible" sin exponer secretos.
 
 ## Estructura
 
@@ -58,7 +58,7 @@ src/
   hooks/       # useLiveGame (realtime), useTeacherAuth
   lib/         # gameLogic (reglas puras), supabase, utils
   data/        # questions.ts (banco verificado)
-  services/    # gameService (Supabase ↔ demo local)
+  services/    # gameService (API Supabase + Edge Function)
   tests/       # gameLogic, simulation (8 equipos), ui
 supabase/
   migrations/001_schema.sql  # esquema + RLS + vista pública sin respuestas

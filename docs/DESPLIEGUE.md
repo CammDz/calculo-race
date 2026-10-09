@@ -21,7 +21,7 @@
    supabase link --project-ref TU_PROJECT_REF
    supabase functions deploy submit-answer
    ```
-   Sin este paso la app sigue funcionando, pero la puntuación la calcula el cliente demo (solo para desarrollo). **Para producción con estudiantes reales, despliega la función.**
+   Sin este paso los estudiantes no pueden enviar respuestas: la app llama a la función sin alternativa. **Despliégala antes de jugar con estudiantes reales.**
 
 ## Parte 2 — Subir el código a GitHub (10 min)
 
@@ -59,13 +59,13 @@
 2. Desde celulares (o ventanas de incógnito) abre `/unirse?codigo=XXXXXX`, registra 2+ equipos.
 3. Pulsa **Iniciar carrera**, responde preguntas, comprueba que la tabla se mueve en vivo.
 4. Pulsa **Siguiente pregunta**, luego **Finalizar** y verifica el podio y la descarga CSV.
-5. Prueba el modo sin servidor: sin variables de entorno la app muestra el badge **MODO DEMO** y usa el código `DEMO01`.
+5. Si alguna pantalla muestra "Servicio no disponible", revisa que las variables de entorno estén definidas y que el deploy sea posterior a ellas.
 
 ## Errores comunes
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
-| Pantalla "MODO DEMO" en producción | Faltan variables en Cloudflare | Añade `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Pages → Settings → Environment variables y re-despliega |
+| Pantalla "Servicio no disponible" | Faltan variables en Cloudflare o deploy anterior a ellas | Añade `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Pages → Settings → Environment variables y pulsa Retry deployment |
 | La tabla no se actualiza sola | Realtime desactivado | Activa Realtime para `games`, `teams`, `answers` en Database → Replication |
 | "No tienes permiso" al crear partida | Sesión expirada o RLS | Cierra sesión y entra de nuevo en `/admin` |
 | QR no abre la sala | URL con código distinto | Regenera el QR desde el panel (usa la URL pública de Cloudflare) |

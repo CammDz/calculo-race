@@ -18,7 +18,6 @@ export function HomePage() {
           <Link to="/unirse" className="btn" aria-label="Ingresar a una partida"><Play size={20} /> Ingresar a una partida</Link>
           <Link to="/admin" className="btn secondary" aria-label="Acceso del profesor"><GraduationCap size={20} /> Soy profesor</Link>
         </div>
-        <p className="hint">Prueba rápida sin cuenta: usa el código <strong>DEMO01</strong> para entrar como equipo.</p>
       </section>
 
       <section className="grid two">

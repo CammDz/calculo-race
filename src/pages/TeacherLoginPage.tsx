@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { useTeacherAuth } from '../hooks/useTeacherAuth';
-import { DEMO_MODE } from '../lib/supabase';
 
 export function TeacherLoginPage() {
   const { signIn } = useTeacherAuth();
@@ -26,7 +25,6 @@ export function TeacherLoginPage() {
     <section className="card">
       <h2>Acceso del profesor</h2>
       <p>Sesión segura con Supabase Auth. Los estudiantes nunca usan esta pantalla.</p>
-      {DEMO_MODE && <div className="badge">MODO DEMO: acepta cualquier correo y clave de 4+ caracteres</div>}
       <form onSubmit={onSubmit} className="mt">
         <div className="field">
           <label htmlFor="email">Correo institucional</label>

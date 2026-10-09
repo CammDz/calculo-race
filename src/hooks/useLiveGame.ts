@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getSupabase, DEMO_MODE } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 import { computeElapsedSec, phaseForElapsed } from '../lib/gameLogic';
 import { getGameById, listTeams, buildLeaderboard, listAnswers, publicQuestion } from '../services/gameService';
 import type { Answer, Game, LeaderboardEntry, Question, Team } from '../types';
 
-/** Reloj oficial: usa marcas del servidor (serverStartedAt + elapsedSec base).
- *  En Supabase se corrige con el reloj de la BD; en demo con Date.now().
- */
+/** Reloj oficial: usa marcas del servidor (serverStartedAt + elapsedSec base),
+ *  corregidas con el reloj de la BD. */
 export function useServerClock(game: Game | null) {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [offsetMs, setOffsetMs] = useState(0);
@@ -33,7 +32,7 @@ export function useServerClock(game: Game | null) {
   }, []);
 
   const serverNow = nowMs + offsetMs;
-  const elapsed = game ? computeElapsedSec(game.elapsedSec, game.serverStartedAt, DEMO_MODE ? nowMs : serverNow) : 0;
+  const elapsed = game ? computeElapsedSec(game.elapsedSec, game.serverStartedAt, serverNow) : 0;
   const phase = phaseForElapsed(Math.min(elapsed, 900));
   return { serverNow, elapsed, phase };
 }
@@ -84,31 +83,19 @@ export function useLiveGame(gameId: string | null): LiveState {
     return () => { cancelled = true; };
   }, [gameId, tick]);
 
-  // Realtime Supabase + eventos demo locales.
+  // Realtime de Supabase (partida + equipos + respuestas). Limpia la
+  // suscripción al desmontar para evitar duplicados.
   useEffect(() => {
     if (!gameId) return;
     const sb = getSupabase();
-    const onLocal = () => reload();
-    window.addEventListener(`cr-change:game:${gameId}`, onLocal);
-    window.addEventListener(`cr-change:teams:${gameId}`, onLocal);
-    window.addEventListener(`cr-change:answers:${gameId}`, onLocal);
-    window.addEventListener('cr-change:games', onLocal);
-    if (!sb) return () => {
-      window.removeEventListener(`cr-change:game:${gameId}`, onLocal);
-      window.removeEventListener(`cr-change:teams:${gameId}`, onLocal);
-      window.removeEventListener(`cr-change:answers:${gameId}`, onLocal);
-      window.removeEventListener('cr-change:games', onLocal);
-    };
+    if (!sb) return;
+    const refresh = () => reload();
     const ch = sb.channel(`game-${gameId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}` }, onLocal)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams', filter: `game_id=eq.${gameId}` }, onLocal)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'answers', filter: `game_id=eq.${gameId}` }, onLocal)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams', filter: `game_id=eq.${gameId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'answers', filter: `game_id=eq.${gameId}` }, refresh)
       .subscribe();
     return () => {
-      window.removeEventListener(`cr-change:game:${gameId}`, onLocal);
-      window.removeEventListener(`cr-change:teams:${gameId}`, onLocal);
-      window.removeEventListener(`cr-change:answers:${gameId}`, onLocal);
-      window.removeEventListener('cr-change:games', onLocal);
       sb.removeChannel(ch);
     };
   }, [gameId, reload]);
@@ -116,24 +103,25 @@ export function useLiveGame(gameId: string | null): LiveState {
   return { game, teams, leaderboard, answers, question, loading, error, reload };
 }
 
-/** Respuesta enviada por este equipo para la pregunta actual. */
+/** Respuesta enviada por este equipo para la pregunta actual (realtime). */
 export function useMyAnswer(gameId: string | null, teamId: string | null, questionId: string | null) {
   const [answer, setAnswer] = useState<Answer | null>(null);
   useEffect(() => {
     if (!gameId || !teamId || !questionId) { setAnswer(null); return; }
     let cancelled = false;
-    listAnswers(gameId).then((all) => {
-      if (cancelled) return;
-      setAnswer(all.find((a) => a.teamId === teamId && a.questionId === questionId) ?? null);
-    }).catch(() => undefined);
-    const onLocal = () => {
+    const fetchMine = () => {
       listAnswers(gameId).then((all) => {
         if (cancelled) return;
         setAnswer(all.find((a) => a.teamId === teamId && a.questionId === questionId) ?? null);
       }).catch(() => undefined);
     };
-    window.addEventListener(`cr-change:answers:${gameId}`, onLocal);
-    return () => { cancelled = true; window.removeEventListener(`cr-change:answers:${gameId}`, onLocal); };
+    fetchMine();
+    const sb = getSupabase();
+    if (!sb) return () => { cancelled = true; };
+    const ch = sb.channel(`my-answer-${teamId}-${questionId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'answers', filter: `team_id=eq.${teamId}` }, fetchMine)
+      .subscribe();
+    return () => { cancelled = true; sb.removeChannel(ch); };
   }, [gameId, teamId, questionId]);
   return answer;
 }
