@@ -7,7 +7,7 @@
 1. Entra a https://supabase.com y crea una cuenta (puedes usar GitHub).
 2. Crea un **New project**: nombre `calculo-race`, contraseña de base de datos (guárdala), región más cercana (p. ej. `South America (São Paulo)`).
 3. Espera ~2 minutos a que el proyecto esté en verde ("Active").
-4. Ve a **SQL Editor → New query**, pega el contenido de `supabase/migrations/001_schema.sql` y pulsa **Run**. Luego repite con `supabase/migrations/002_min_teams.sql` (permite partidas desde 2 equipos). Las sentencias son seguras de re-ejecutar.
+4. Ve a **SQL Editor → New query** y ejecuta **en orden** `supabase/migrations/001_schema.sql`, `002_min_teams.sql` y `003_teacher_profiles.sql` (uno por query, pulsando **Run**). Sin la 003, crear partidas falla. Las sentencias son seguras de re-ejecutar.
 5. En **SQL Editor → New query**, pega `supabase/seed.sql` y pulsa **Run**. Verifica en **Table Editor → questions** que haya 44 filas.
 6. Ve a **Project Settings → API** y copia:
    - `Project URL` → será `VITE_SUPABASE_URL`
