@@ -2,7 +2,7 @@
 // Todo lo sensible se re-valida en el servidor (Edge Function); aquí vive la
 // misma regla para UX optimista y para pruebas unitarias.
 
-import type { GameStatus, LeaderboardEntry, LevelConfig, LevelNumber } from '../types';
+import type { GameStatus, LeaderboardEntry, LevelConfig, LevelNumber, Question } from '../types';
 
 /** Cronograma oficial de 900 s (15 min). */
 export const MATCH_TOTAL_SEC = 900;
@@ -168,4 +168,12 @@ export function seededShuffle<T>(items: T[], seed: string): T[] {
 export function isAnswerWindowOpen(nowServerMs: number, closesAt: string | null): boolean {
   if (!closesAt) return false;
   return nowServerMs < Date.parse(closesAt);
+}
+
+/** Presenta una pregunta con las opciones en orden aleatorio determinista por
+ *  partida (misma semilla = mismo orden para todos los equipos).
+ *  Los IDs A/B/C/D viajan con su texto: la validación del servidor no cambia.
+ */
+export function presentQuestion(q: Question, seed: string): Question {
+  return { ...q, options: seededShuffle(q.options, seed) };
 }

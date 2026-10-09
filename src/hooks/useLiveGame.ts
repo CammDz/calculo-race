@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSupabase } from '../lib/supabase';
-import { computeElapsedSec, phaseForElapsed } from '../lib/gameLogic';
+import { computeElapsedSec, phaseForElapsed, presentQuestion } from '../lib/gameLogic';
 import { getGameById, listTeams, buildLeaderboard, listAnswers, publicQuestion } from '../services/gameService';
 import type { Answer, Game, LeaderboardEntry, Question, Team } from '../types';
 
@@ -75,7 +75,9 @@ export function useLiveGame(gameId: string | null): LiveState {
         ]);
         if (cancelled) return;
         setGame(g); setTeams(t); setLeaderboard(lb); setAnswers(a);
-        setQuestion(await publicQuestion(g?.currentQuestionId ?? null));
+        const raw = await publicQuestion(g?.currentQuestionId ?? null);
+        // Orden aleatorio por partida, idéntico para todos los equipos.
+        setQuestion(raw && g ? presentQuestion(raw, `${gameId}:${raw.id}`) : raw);
         setError(null);
       } catch (e) {
         if (!cancelled && firstLoad.current) setError(e instanceof Error ? e.message : 'Error de conexión.');

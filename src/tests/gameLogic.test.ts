@@ -6,7 +6,7 @@ import {
   pointsForAnswer, speedBonus, phaseForElapsed, computeElapsedSec,
   sortLeaderboard, generateRoomCode, validateTeamName, validateRoomCode,
   seededShuffle, isAnswerWindowOpen, secondsRemainingInPhase, shipProgress,
-  MATCH_TOTAL_SEC, basePointsForLevel,
+  MATCH_TOTAL_SEC, basePointsForLevel, presentQuestion,
 } from '../lib/gameLogic';
 import { QUESTIONS, questionsByLevel } from '../data/questions';
 
@@ -154,8 +154,43 @@ describe('banco de preguntas', () => {
   });
   it('incluye el ejemplo verificado r=2+2cos θ, θ=π → r=0', () => {
     const q = QUESTIONS.find((x) => x.id === 'n2-01');
-    expect(q?.correctOptionId).toBe('A');
-    expect(q?.options.find((o) => o.id === 'A')?.text).toBe('0');
+    const correct = q?.options.find((o) => o.id === q?.correctOptionId);
+    expect(correct?.text).toBe('0');
+  });
+  it('letras correctas balanceadas y sin rachas por nivel', () => {
+    for (const l of [1, 2, 3, 4] as const) {
+      const seq = questionsByLevel(l).map((q) => q.correctOptionId);
+      expect(new Set(seq).size).toBe(4); // A, B, C y D presentes
+      for (let i = 2; i < seq.length; i++) {
+        expect(`${seq[i - 2]}${seq[i - 1]}${seq[i]}`).not.toMatch(/^(.)\1\1$/);
+      }
+    }
+  });
+  it('n3-08 tiene una única opción correcta', () => {
+    const q = QUESTIONS.find((x) => x.id === 'n3-08');
+    expect(q?.options.find((o) => o.id === 'D')?.text).toBe('−1');
+  });
+});
+
+describe('presentación aleatoria por partida', () => {
+  const q = QUESTIONS.find((x) => x.id === 'n1-01')!;
+  it('misma semilla = mismo orden para todos los equipos', () => {
+    const a = presentQuestion(q, 'sala-X:n1-01').options.map((o) => o.id);
+    const b = presentQuestion(q, 'sala-X:n1-01').options.map((o) => o.id);
+    expect(a).toEqual(b);
+  });
+  it('conserva IDs y respuesta correcta (valida el servidor igual)', () => {
+    const p = presentQuestion(q, 'sala-Y:n1-01');
+    expect(p.options.map((o) => o.id).sort()).toEqual(['A', 'B', 'C', 'D']);
+    expect(p.correctOptionId).toBe(q.correctOptionId);
+    expect(p.options.find((o) => o.id === p.correctOptionId)?.text)
+      .toBe(q.options.find((o) => o.id === q.correctOptionId)?.text);
+  });
+  it('el orden varía entre partidas', () => {
+    const orders = new Set(
+      ['g1', 'g2', 'g3', 'g4', 'g5'].map((g) => presentQuestion(q, `${g}:n1-01`).options.map((o) => o.id).join('')),
+    );
+    expect(orders.size).toBeGreaterThan(1);
   });
 });
 
