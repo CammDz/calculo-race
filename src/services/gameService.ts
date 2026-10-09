@@ -26,7 +26,7 @@ export async function createGame(params: CreateGameParams): Promise<Game> {
     points_l3: params.points[3], points_l4: params.points[4],
     show_explanations: params.showExplanations,
   }).select('*').single();
-  if (error) throw new Error(mapSupabaseError(error.message));
+  if (error) throw new Error(mapSupabaseError(error));
   return rowToGame(data);
 }
 
@@ -34,28 +34,28 @@ export async function getGameByCode(code: string): Promise<Game | null> {
   const sb = requireSupabase();
   const upper = code.trim().toUpperCase();
   const { data, error } = await sb.from('games').select('*').eq('code', upper).maybeSingle();
-  if (error) throw new Error(mapSupabaseError(error.message));
+  if (error) throw new Error(mapSupabaseError(error));
   return data ? rowToGame(data) : null;
 }
 
 export async function getGameById(id: string): Promise<Game | null> {
   const sb = requireSupabase();
   const { data, error } = await sb.from('games').select('*').eq('id', id).maybeSingle();
-  if (error) throw new Error(mapSupabaseError(error.message));
+  if (error) throw new Error(mapSupabaseError(error));
   return data ? rowToGame(data) : null;
 }
 
 export async function listTeacherGames(teacherId: string): Promise<Game[]> {
   const sb = requireSupabase();
   const { data, error } = await sb.from('games').select('*').eq('teacher_id', teacherId).order('created_at', { ascending: false });
-  if (error) throw new Error(mapSupabaseError(error.message));
+  if (error) throw new Error(mapSupabaseError(error));
   return (data ?? []).map(rowToGame);
 }
 
 export async function updateGame(id: string, patch: Partial<Game>): Promise<Game> {
   const sb = requireSupabase();
   const { data, error } = await sb.from('games').update(gameToRow(patch)).eq('id', id).select('*').single();
-  if (error) throw new Error(mapSupabaseError(error.message));
+  if (error) throw new Error(mapSupabaseError(error));
   return rowToGame(data);
 }
 
@@ -67,14 +67,14 @@ export async function joinTeam(gameId: string, name: string, shipColor: string):
   const { data, error } = await sb.from('teams').insert({
     game_id: gameId, name: clean, ship_color: shipColor, score: 0,
   }).select('*').single();
-  if (error) throw new Error(mapJoinError(error.message));
+  if (error) throw new Error(mapJoinError(error));
   return teamRowToTeam(data);
 }
 
 export async function listTeams(gameId: string): Promise<Team[]> {
   const sb = requireSupabase();
   const { data, error } = await sb.from('teams').select('*').eq('game_id', gameId).order('score', { ascending: false });
-  if (error) throw new Error(mapSupabaseError(error.message));
+  if (error) throw new Error(mapSupabaseError(error));
   return (data ?? []).map(teamRowToTeam);
 }
 
@@ -91,14 +91,14 @@ export async function submitAnswer(params: {
 }): Promise<SubmitResult> {
   const sb = requireSupabase();
   const { data, error } = await sb.functions.invoke('submit-answer', { body: params });
-  if (error) throw new Error(mapSupabaseError(error.message));
+  if (error) throw new Error(mapSupabaseError(error));
   return data as SubmitResult;
 }
 
 export async function listAnswers(gameId: string): Promise<Answer[]> {
   const sb = requireSupabase();
   const { data, error } = await sb.from('answers').select('*').eq('game_id', gameId).order('created_at', { ascending: true });
-  if (error) throw new Error(mapSupabaseError(error.message));
+  if (error) throw new Error(mapSupabaseError(error));
   return (data ?? []).map(answerRowToAnswer);
 }
 
@@ -198,12 +198,23 @@ function answerRowToAnswer(r: Record<string, unknown>): Answer {
   };
 }
 
-function mapSupabaseError(msg: string): string {
-  if (/row-level security/i.test(msg)) return 'No tienes permiso para esta acción.';
-  return 'Ocurrió un error de conexión. Intenta de nuevo.';
+function errCode(e: unknown): string {
+  if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: unknown }).code != null) {
+    return String((e as { code: unknown }).code);
+  }
+  return '';
 }
 
-function mapJoinError(msg: string): string {
+function mapSupabaseError(error: unknown): string {
+  const msg = error instanceof Error ? error.message : String((error as { message?: unknown })?.message ?? error ?? '');
+  const code = errCode(error);
+  const suffix = code ? ` (código ${code})` : '';
+  if (/row-level security/i.test(msg)) return `Sin permiso para esta acción${suffix}. Cierra sesión y entra de nuevo.`;
+  return `Ocurrió un error de conexión${suffix}. Intenta de nuevo.`;
+}
+
+function mapJoinError(error: unknown): string {
+  const msg = error instanceof Error ? error.message : String((error as { message?: unknown })?.message ?? '');
   if (/duplicate|unique/i.test(msg)) return 'Ese nombre de equipo ya está en uso.';
-  return mapSupabaseError(msg);
+  return mapSupabaseError(error);
 }
