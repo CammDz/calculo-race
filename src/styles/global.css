@@ -310,20 +310,36 @@ table.table th { color: var(--muted); font-size: 0.78rem; text-transform: upperc
 .track-flag { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 1.2rem; }
 .ship-dot { transition: left .8s cubic-bezier(.2,.8,.2,1); }
 
-/* Pista con todas las naves hacia la meta (una calle por equipo) */
-.race-lanes { display: grid; gap: 12px; margin-top: 14px; }
-.lane {
-  display: grid; gap: 8px; padding: 12px 14px 14px;
-  border: 1px solid rgba(148,163,255,.18); border-radius: 14px;
-  background: rgba(6,10,40,.45);
+/* Una sola línea de meta compartida (anónima: solo naves con sus colores) */
+.meta-track {
+  position: relative; height: 180px; margin-top: 14px;
+  border-radius: 16px; overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(6,10,40,.7), rgba(6,10,40,.5)),
+    repeating-linear-gradient(90deg, rgba(148,163,255,.14) 0 14px, transparent 14px 28px);
+  border: 1px dashed rgba(148,163,255,.35);
 }
-.lane.me { border-color: rgba(232,176,159,.55); background: rgba(232,176,159,.07); }
-.lane-head { display: flex; align-items: center; gap: 10px; }
-.lane-pos { font-weight: 800; color: var(--muted); min-width: 26px; }
-.lane.me .lane-pos { color: var(--coral-strong); }
-.lane-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lane-track { height: 44px; }
-.lane-track .ship-dot svg { display: block; }
+.meta-start {
+  position: absolute; left: 10px; top: 8px; font-size: .68rem; font-weight: 800;
+  letter-spacing: .14em; color: var(--muted);
+}
+.meta-flag {
+  position: absolute; right: 4px; top: 0; bottom: 0; width: 30px;
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+  border-left: 2px dashed rgba(232,176,159,.6); background: rgba(232,176,159,.07);
+}
+.meta-ship {
+  position: absolute; transform: translate(-50%, -50%);
+  transition: left .8s cubic-bezier(.2,.8,.2,1), top .8s cubic-bezier(.2,.8,.2,1);
+  display: grid; justify-items: center; gap: 0;
+}
+.meta-ship svg { display: block; }
+.meta-ship.me svg { filter: drop-shadow(0 0 8px rgba(232,176,159,.9)); }
+.meta-you {
+  font-size: .62rem; font-weight: 800; letter-spacing: .08em;
+  background: var(--coral); color: #0b1030; border-radius: 999px; padding: 1px 8px;
+  margin-top: 1px;
+}
 .ship-go { animation: shipGo .8s ease; }
 @keyframes shipGo { 0% { transform: translate(-50%,-50%) scale(1); } 40% { transform: translate(-30%,-60%) scale(1.12); } 100% { transform: translate(-50%,-50%) scale(1); } }
 table.leaderboard tr.me { background: rgba(232,176,159,.12); }

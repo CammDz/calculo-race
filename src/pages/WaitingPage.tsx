@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Users, Flag } from 'lucide-react';
 import { useLiveGame, useServerClock } from '../hooks/useLiveGame';
 import { Clock, ConnectionBadge } from '../components/Hud';
-import { Leaderboard } from '../components/Leaderboard';
 import { RoomQr } from '../components/RoomQr';
 import { Ship } from '../components/Ship';
 import { RaceTrack } from '../components/RaceTrack';
@@ -55,8 +54,7 @@ export function WaitingPage() {
       <section className="card">
         <h3><Users size={18} /> Equipos conectados ({live.teams.length})</h3>
         <RaceTrack teams={live.teams} highlightId={myTeamId ?? undefined} />
-        <h3 className="mt">Clasificación</h3>
-        <Leaderboard entries={live.leaderboard} highlightId={myTeamId ?? undefined} />
+        <p className="hint mt">Cada nave lleva el color de su equipo. La tuya dice TÚ.</p>
       </section>
     </div>
   );

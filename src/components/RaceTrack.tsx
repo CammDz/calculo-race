@@ -3,8 +3,9 @@ import { shipProgress } from '../lib/gameLogic';
 import type { Team } from '../types';
 import { Ship } from './Ship';
 
-/** Pista de carrera hacia la meta: una calle por equipo con su nave avanzando
- *  según los puntos reales del servidor. El líder va más cerca de la 🏁. */
+/** Una sola línea de meta compartida: todas las naves avanzan según los puntos
+ *  reales del servidor. Anónima para estudiantes: sin nombres ni puntos, solo
+ *  las naves con sus colores (la propia marcada con "TÚ"). */
 export function RaceTrack({ teams, highlightId }: { teams: Team[]; highlightId?: string | null }) {
   const sorted = useMemo(
     () =>
@@ -16,24 +17,31 @@ export function RaceTrack({ teams, highlightId }: { teams: Team[]; highlightId?:
     [teams],
   );
   const max = Math.max(1, ...teams.map((t) => t.score));
+  const myIndex = highlightId ? sorted.findIndex((t) => t.id === highlightId) : -1;
   if (teams.length === 0) return <p className="hint">Aún no hay naves en la pista.</p>;
+  const label = myIndex >= 0
+    ? `Pista hacia la meta con ${teams.length} naves. Vas en el puesto ${myIndex + 1} de ${teams.length}.`
+    : `Pista hacia la meta con ${teams.length} naves.`;
   return (
-    <div className="race-lanes" role="list" aria-label="Pista de carrera hacia la meta">
-      {sorted.map((t, i) => (
-        <div key={t.id} role="listitem" aria-label={`${i + 1}.º ${t.name} con ${t.score} puntos`} className={`lane ${t.id === highlightId ? 'me' : ''}`}>
-          <div className="lane-head">
-            <span className="lane-pos" aria-hidden="true">{i + 1}.</span>
-            <span className="lane-name">{t.name}</span>
-            <span className="badge lane-score">{t.score} pts</span>
-          </div>
-          <div className="lane-track track">
-            <span className="track-flag" aria-hidden="true">🏁</span>
-            <span className="ship-dot" style={{ left: `${8 + shipProgress(t.score, max) * 84}%` }}>
-              <Ship color={t.shipColor} size={30} />
-            </span>
-          </div>
-        </div>
-      ))}
+    <div className="meta-track" role="img" aria-label={label}>
+      <span className="meta-start" aria-hidden="true">SALIDA</span>
+      <span className="meta-flag" aria-hidden="true">🏁</span>
+      {sorted.map((t, i) => {
+        const mine = t.id === highlightId;
+        // Horizontal = puntos; vertical = reparto por orden para que ninguna
+        // nave tape a otra (todas los colores siempre visibles).
+        const top = sorted.length === 1 ? 50 : 10 + (i / (sorted.length - 1)) * 80;
+        return (
+          <span
+            key={t.id}
+            className={`meta-ship ${mine ? 'me' : ''}`}
+            style={{ left: `${6 + shipProgress(t.score, max) * 86}%`, top: `${top}%` }}
+          >
+            <Ship color={t.shipColor} size={mine ? 38 : 30} boost={mine} />
+            {mine && <span className="meta-you">TÚ</span>}
+          </span>
+        );
+      })}
     </div>
   );
 }

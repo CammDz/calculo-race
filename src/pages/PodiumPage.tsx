@@ -1,8 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
-import { Trophy, Medal, Home, Download } from 'lucide-react';
+import { Trophy, Medal, Home } from 'lucide-react';
 import { useLiveGame } from '../hooks/useLiveGame';
 import { Ship } from '../components/Ship';
-import { downloadCsv } from '../lib/utils';
 
 export function PodiumPage() {
   const { gameId = '' } = useParams();
@@ -13,13 +12,6 @@ export function PodiumPage() {
 
   const [first, second, third, ...rest] = live.leaderboard;
   const winner = first;
-
-  function exportCsv() {
-    downloadCsv(`calculo-race-${live.game?.code}.csv`, live.leaderboard.map((e, i) => ({
-      puesto: i + 1, equipo: e.teamName, puntos: e.score,
-      correctas: e.correctCount, tiempo_ms: e.totalResponseTimeMs,
-    })));
-  }
 
   return (
     <div className="grid">
@@ -43,8 +35,7 @@ export function PodiumPage() {
             ))}
           </div>
         )}
-        <div className="grid two mt">
-          <button className="btn secondary" onClick={exportCsv}><Download size={18} /> Descargar CSV</button>
+        <div className="mt center">
           <Link to="/" className="btn"><Home size={18} /> Volver al inicio</Link>
         </div>
       </section>

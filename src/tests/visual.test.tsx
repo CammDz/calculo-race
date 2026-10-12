@@ -54,30 +54,31 @@ describe('pista hacia la meta con todas las naves', () => {
     { id: 't2', gameId: 'g', name: 'Medio', shipColor: '#a78bfa', score: 150, correctCount: 1, totalResponseTimeMs: 2000, connected: true, lastSeenAt: '' },
     { id: 't3', gameId: 'g', name: 'Cola', shipColor: '#fb923c', score: 0, correctCount: 0, totalResponseTimeMs: 0, connected: true, lastSeenAt: '' },
   ];
-  it('muestra una calle por equipo con su nave y puntos', () => {
-    render(<RaceTrack teams={teams} highlightId="t2" />);
-    expect(screen.getByRole('list', { name: /pista de carrera/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+  it('muestra todas las naves en una sola pista sin nombres ni puntos', () => {
+    const { container } = render(<RaceTrack teams={teams} highlightId="t2" />);
+    expect(screen.getByRole('img', { name: /pista hacia la meta/i })).toBeInTheDocument();
+    expect(container.querySelectorAll('.meta-ship')).toHaveLength(3);
     for (const t of teams) {
-      expect(screen.getByText(t.name)).toBeInTheDocument();
+      expect(screen.queryByText(t.name)).not.toBeInTheDocument();
+      expect(screen.queryByText(`${t.score} pts`)).not.toBeInTheDocument();
     }
   });
   it('el líder va más cerca de la meta que el último', () => {
     const { container } = render(<RaceTrack teams={teams} />);
-    const dots = container.querySelectorAll<HTMLElement>('.lane .ship-dot');
+    const ships = container.querySelectorAll<HTMLElement>('.meta-ship');
     const left = (el: HTMLElement) => parseFloat(el.style.left);
-    expect(left(dots[0])).toBeGreaterThan(left(dots[2]));
+    expect(left(ships[0])).toBeGreaterThan(left(ships[2]));
   });
   it('cada nave usa su propio color (sin repetir)', () => {
     const { container } = render(<RaceTrack teams={teams} />);
     const colors = new Set(teams.map((t) => t.shipColor.toLowerCase()));
     expect(colors.size).toBe(teams.length);
-    expect(container.querySelector('.lane.me')).toBeNull();
+    expect(container.querySelector('.meta-ship.me')).toBeNull();
   });
-  it('resalta a mi equipo', () => {
+  it('marca mi nave con TÚ y sin revelar a las demás', () => {
     const { container } = render(<RaceTrack teams={teams} highlightId="t2" />);
-    expect(container.querySelectorAll('.lane.me')).toHaveLength(1);
-    expect(screen.getByRole('listitem', { name: /medio/i }).className).toContain('me');
+    expect(container.querySelectorAll('.meta-ship.me')).toHaveLength(1);
+    expect(screen.getByText('TÚ')).toBeInTheDocument();
   });
 });
 
@@ -103,9 +104,9 @@ describe('CSS de carrera (legibilidad y táctil)', () => {
     expect(css).toContain('planet-deco');
     expect(css.toLowerCase()).not.toContain('url(http');
   });
-  it('pista multicanal y colores ocupados', () => {
-    expect(css).toContain('race-lanes');
-    expect(css).toContain('lane-track');
+  it('pista única y colores ocupados', () => {
+    expect(css).toContain('meta-track');
+    expect(css).toContain('meta-ship');
     expect(css).toContain('color-btn');
   });
 });

@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, XCircle, Send, Rocket, Timer as TimerIcon } from 'lucide-react';
 import { useLiveGame, useMyAnswer, useServerClock } from '../hooks/useLiveGame';
 import { ConnectionBadge } from '../components/Hud';
-import { Leaderboard } from '../components/Leaderboard';
 import { PolarPlot } from '../components/PolarPlot';
 import { Ship, SpaceBackdrop } from '../components/Ship';
 import { RaceTrack } from '../components/RaceTrack';
@@ -189,7 +188,6 @@ export function RacePage() {
               </div>
               <div className="row mt space-between">
                 <span className="hint">Cierra en {Math.ceil(closesInSec)}s · una sola respuesta por pregunta</span>
-                {myRank != null && <span className="hint">Puesto {myRank} de {live.leaderboard.length}</span>}
               </div>
               {feedback && <div className={feedback.startsWith('¡Correcto') ? 'success mt' : 'error mt'} role="status">{feedback}</div>}
               {showPoints != null && myAnswer?.isCorrect && (
@@ -220,8 +218,7 @@ export function RacePage() {
           {rankUp && <div className="success mt rank-up" role="status">¡Subiste de posición! 🚀</div>}
           <h3 className="mt">Carrera hacia la meta 🏁</h3>
           <RaceTrack teams={live.teams} highlightId={teamId} />
-          <h3 className="mt">Clasificación en vivo</h3>
-          <Leaderboard entries={live.leaderboard} highlightId={teamId} compact />
+          <p className="hint mt">Cada nave lleva el color de su equipo. La tuya dice TÚ.</p>
         </section>
       </div>
     </div>
