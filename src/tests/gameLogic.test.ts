@@ -272,8 +272,21 @@ describe('número de equipos (2–10)', () => {
   it('no recorta mientras se escribe el 10 (el "1" intermedio es válido escribirlo)', () => {
     // El campo guarda texto libre; solo al confirmar se valida el rango.
     let text = '';
-    for (const ch of '10') text = (text + ch).replace(/[^0-9]/g, '').slice(0, 2);
+    const type = (ch: string) => {
+      const digits = (text + ch).replace(/[^0-9]/g, '').slice(0, 2);
+      text = digits !== '' && Number(digits) > 10 ? '10' : digits;
+    };
+    for (const ch of '10') type(ch);
     expect(text).toBe('10');
     expect(parseTeamCount(text)).toBe(10);
+  });
+  it('las letras no entran y el tope en vivo es 10', () => {
+    let text = '';
+    const type = (ch: string) => {
+      const digits = (text + ch).replace(/[^0-9]/g, '').slice(0, 2);
+      text = digits !== '' && Number(digits) > 10 ? '10' : digits;
+    };
+    for (const ch of '1a2b') type(ch);
+    expect(text).toBe('10');
   });
 });

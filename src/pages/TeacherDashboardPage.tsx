@@ -105,7 +105,11 @@ export function TeacherDashboardPage() {
                 value={maxTeamsText}
                 placeholder="8"
                 aria-describedby="max-hint"
-                onChange={(e) => setMaxTeamsText(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                onChange={(e) => {
+                  // Solo dígitos y tope en vivo a 10 (el "1" intermedio de "10" se conserva).
+                  const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                  setMaxTeamsText(digits !== '' && Number(digits) > 10 ? '10' : digits);
+                }}
                 onBlur={() => {
                   // Al salir, si quedó vacío o fuera de rango, vuelve a 8.
                   if (parseTeamCount(maxTeamsText) == null && maxTeamsText.trim() !== '') {
