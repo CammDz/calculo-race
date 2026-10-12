@@ -6,6 +6,7 @@ import { Clock, ConnectionBadge } from '../components/Hud';
 import { Leaderboard } from '../components/Leaderboard';
 import { RoomQr } from '../components/RoomQr';
 import { Ship } from '../components/Ship';
+import { RaceTrack } from '../components/RaceTrack';
 import { secondsRemainingInPhase } from '../lib/gameLogic';
 import { loadTeam } from '../lib/utils';
 import { useNowMs } from '../hooks/useLiveGame';
@@ -53,6 +54,8 @@ export function WaitingPage() {
       </section>
       <section className="card">
         <h3><Users size={18} /> Equipos conectados ({live.teams.length})</h3>
+        <RaceTrack teams={live.teams} highlightId={myTeamId ?? undefined} />
+        <h3 className="mt">Clasificación</h3>
         <Leaderboard entries={live.leaderboard} highlightId={myTeamId ?? undefined} />
       </section>
     </div>

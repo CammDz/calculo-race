@@ -66,6 +66,12 @@ export async function updateGame(id: string, patch: Partial<Game>): Promise<Game
 export async function joinTeam(gameId: string, name: string, shipColor: string): Promise<Team> {
   const clean = name.trim();
   const sb = requireSupabase();
+  // El color identifica visualmente a cada nave: no se puede repetir por partida.
+  const { data: existing } = await sb.from('teams').select('ship_color').eq('game_id', gameId);
+  const taken = (existing ?? []).map((r: { ship_color: string }) => String(r.ship_color ?? '').trim().toLowerCase());
+  if (taken.includes(shipColor.trim().toLowerCase())) {
+    throw new Error('Ese color de nave ya está en uso por otro equipo. Elige otro color.');
+  }
   // Inserción directa con RLS: el nombre es único por partida y los puntos
   // solo los modifica la Edge Function en el servidor.
   const { data, error } = await sb.from('teams').insert({

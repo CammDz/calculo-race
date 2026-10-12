@@ -6,8 +6,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 // @ts-ignore - fs disponible en runtime de vitest (node), sin @types/node en el proyecto
 import { readFileSync } from 'node:fs';
 import { Leaderboard } from '../components/Leaderboard';
+import { RaceTrack } from '../components/RaceTrack';
 import { Ship } from '../components/Ship';
 import type { LeaderboardEntry } from '../types';
+import type { Team } from '../types';
 
 const entries: LeaderboardEntry[] = Array.from({ length: 8 }, (_, i) => ({
   teamId: `t${i + 1}`,
@@ -46,6 +48,39 @@ describe('nave del equipo', () => {
   });
 });
 
+describe('pista hacia la meta con todas las naves', () => {
+  const teams: Team[] = [
+    { id: 't1', gameId: 'g', name: 'Líder', shipColor: '#38bdf8', score: 300, correctCount: 3, totalResponseTimeMs: 1000, connected: true, lastSeenAt: '' },
+    { id: 't2', gameId: 'g', name: 'Medio', shipColor: '#a78bfa', score: 150, correctCount: 1, totalResponseTimeMs: 2000, connected: true, lastSeenAt: '' },
+    { id: 't3', gameId: 'g', name: 'Cola', shipColor: '#fb923c', score: 0, correctCount: 0, totalResponseTimeMs: 0, connected: true, lastSeenAt: '' },
+  ];
+  it('muestra una calle por equipo con su nave y puntos', () => {
+    render(<RaceTrack teams={teams} highlightId="t2" />);
+    expect(screen.getByRole('list', { name: /pista de carrera/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    for (const t of teams) {
+      expect(screen.getByText(t.name)).toBeInTheDocument();
+    }
+  });
+  it('el líder va más cerca de la meta que el último', () => {
+    const { container } = render(<RaceTrack teams={teams} />);
+    const dots = container.querySelectorAll<HTMLElement>('.lane .ship-dot');
+    const left = (el: HTMLElement) => parseFloat(el.style.left);
+    expect(left(dots[0])).toBeGreaterThan(left(dots[2]));
+  });
+  it('cada nave usa su propio color (sin repetir)', () => {
+    const { container } = render(<RaceTrack teams={teams} />);
+    const colors = new Set(teams.map((t) => t.shipColor.toLowerCase()));
+    expect(colors.size).toBe(teams.length);
+    expect(container.querySelector('.lane.me')).toBeNull();
+  });
+  it('resalta a mi equipo', () => {
+    const { container } = render(<RaceTrack teams={teams} highlightId="t2" />);
+    expect(container.querySelectorAll('.lane.me')).toHaveLength(1);
+    expect(screen.getByRole('listitem', { name: /medio/i }).className).toContain('me');
+  });
+});
+
 describe('CSS de carrera (legibilidad y táctil)', () => {
   const css = readFileSync('src/styles/global.css', 'utf8');
   it('opciones grandes y táctiles (>=56px)', () => {
@@ -67,5 +102,10 @@ describe('CSS de carrera (legibilidad y táctil)', () => {
     expect(css).toContain('space-backdrop');
     expect(css).toContain('planet-deco');
     expect(css.toLowerCase()).not.toContain('url(http');
+  });
+  it('pista multicanal y colores ocupados', () => {
+    expect(css).toContain('race-lanes');
+    expect(css).toContain('lane-track');
+    expect(css).toContain('color-btn');
   });
 });

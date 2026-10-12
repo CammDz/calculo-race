@@ -6,8 +6,9 @@ import { ConnectionBadge } from '../components/Hud';
 import { Leaderboard } from '../components/Leaderboard';
 import { PolarPlot } from '../components/PolarPlot';
 import { Ship, SpaceBackdrop } from '../components/Ship';
+import { RaceTrack } from '../components/RaceTrack';
 import { submitAnswer, QUESTION_WINDOW_MS } from '../services/gameService';
-import { matchRemaining, secondsRemainingInPhase, shipProgress, LEVELS, formatClock } from '../lib/gameLogic';
+import { matchRemaining, secondsRemainingInPhase, LEVELS, formatClock } from '../lib/gameLogic';
 import { loadTeam } from '../lib/utils';
 import { QUESTIONS, questionsByLevel } from '../data/questions';
 
@@ -217,14 +218,8 @@ export function RacePage() {
             <span className="badge">{myTeam?.score ?? 0} pts</span>
           </div>
           {rankUp && <div className="success mt rank-up" role="status">¡Subiste de posición! 🚀</div>}
-          <div className="mt race-track" aria-label="Progreso de mi nave">
-            <div className="track">
-              <span className="track-flag" aria-hidden="true">🏁</span>
-              <span className={`ship-dot ${myAnswer?.isCorrect ? 'ship-go' : ''}`} style={{ left: `${8 + shipProgress(myTeam?.score ?? 0) * 84}%` }}>
-                {myTeam && <Ship color={myTeam.shipColor} size={38} boost={!!myAnswer?.isCorrect} />}
-              </span>
-            </div>
-          </div>
+          <h3 className="mt">Carrera hacia la meta 🏁</h3>
+          <RaceTrack teams={live.teams} highlightId={teamId} />
           <h3 className="mt">Clasificación en vivo</h3>
           <Leaderboard entries={live.leaderboard} highlightId={teamId} compact />
         </section>

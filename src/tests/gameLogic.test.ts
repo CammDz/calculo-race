@@ -7,6 +7,7 @@ import {
   sortLeaderboard, generateRoomCode, validateTeamName, validateRoomCode,
   seededShuffle, isAnswerWindowOpen, secondsRemainingInPhase, shipProgress,
   MATCH_TOTAL_SEC, basePointsForLevel, presentQuestion, questionIdForLevelStart,
+  isColorTaken, firstFreeColor,
 } from '../lib/gameLogic';
 import { QUESTIONS, questionsByLevel } from '../data/questions';
 
@@ -236,5 +237,21 @@ describe('cambio de nivel publica pregunta nueva', () => {
     // nivel anterior dejan de mostrarse en estudiante y profesor.
     const oldAnswers = [{ questionId: 'n1-03', teamId: 't1' }];
     expect(oldAnswers.filter((a) => a.questionId === id)).toHaveLength(0);
+  });
+});
+
+describe('colores de nave únicos por partida', () => {
+  const palette = ['#38bdf8', '#a78bfa', '#fb923c'] as const;
+  it('detecta colores en uso sin importar mayúsculas o espacios', () => {
+    expect(isColorTaken('#38BDF8', ['#38bdf8'])).toBe(true);
+    expect(isColorTaken(' #a78bfa ', ['#A78BFA'])).toBe(true);
+    expect(isColorTaken('#fb923c', ['#38bdf8'])).toBe(false);
+  });
+  it('devuelve el primer color libre de la paleta', () => {
+    expect(firstFreeColor(palette, ['#38bdf8'])).toBe('#a78bfa');
+    expect(firstFreeColor(palette, [])).toBe('#38bdf8');
+  });
+  it('null cuando todos los colores están en uso', () => {
+    expect(firstFreeColor(palette, [...palette])).toBeNull();
   });
 });

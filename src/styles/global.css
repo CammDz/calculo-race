@@ -46,10 +46,10 @@ body::before {
 #root { position: relative; z-index: 1; }
 a { color: var(--blue); }
 
-.app-shell { max-width: 1080px; margin: 0 auto; padding: 16px 14px 48px; }
+.app-shell { max-width: 1080px; margin: 0 auto; padding: 22px 18px 60px; }
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 4px; gap: 12px;
+  padding: 12px 6px 16px; gap: 12px;
 }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
 .brand-name { font-weight: 800; letter-spacing: 0.4px; font-size: 1.05rem; }
@@ -67,15 +67,15 @@ a { color: var(--blue); }
   border: 1px solid rgba(148, 163, 255, 0.22);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 18px;
+  padding: 22px;
 }
-.card + .card { margin-top: 14px; }
-.grid { display: grid; gap: 14px; }
+.card + .card { margin-top: 18px; }
+.grid { display: grid; gap: 18px; }
 @media (min-width: 760px) { .grid.two { grid-template-columns: 1fr 1fr; } }
 
-h1, h2, h3 { margin: 0 0 8px; line-height: 1.15; }
-p { color: var(--muted); line-height: 1.55; }
-.question-text { color: var(--text); font-size: 1.12rem; line-height: 1.6; }
+h1, h2, h3 { margin: 0 0 10px; line-height: 1.2; }
+p { color: var(--muted); line-height: 1.6; margin: 0 0 12px; }
+.question-text { color: var(--text); font-size: 1.12rem; line-height: 1.65; margin: 12px 0; }
 
 .btn {
   appearance: none; border: none; cursor: pointer;
@@ -96,7 +96,7 @@ p { color: var(--muted); line-height: 1.55; }
 .btn.small { min-height: 42px; padding: 8px 12px; font-size: 0.9rem; width: auto; }
 .btn.danger { background: linear-gradient(135deg, #fca5a5, #f87171); color: #2a0a0a; }
 
-.field { display: grid; gap: 6px; margin: 10px 0; }
+.field { display: grid; gap: 8px; margin: 14px 0; }
 .field label { font-weight: 700; font-size: 0.9rem; }
 .input, .select {
   width: 100%; border-radius: 12px; border: 1px solid rgba(148,163,255,.35);
@@ -109,13 +109,13 @@ p { color: var(--muted); line-height: 1.55; }
 .success { color: #c9ffe9; background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.4); padding: 10px 12px; border-radius: 12px; }
 .hint { font-size: 0.85rem; color: var(--muted); }
 
-.options { display: grid; gap: 10px; margin-top: 12px; }
+.options { display: grid; gap: 12px; margin-top: 14px; }
 .option {
-  text-align: left; border-radius: 14px; padding: 14px;
+  text-align: left; border-radius: 14px; padding: 15px 16px;
   border: 1px solid rgba(148,163,255,.3);
   background: rgba(8, 13, 50, 0.65); color: var(--text);
   font-size: 1rem; min-height: 56px; cursor: pointer;
-  display: flex; gap: 10px; align-items: flex-start;
+  display: flex; gap: 12px; align-items: flex-start;
 }
 .option .letter {
   flex: 0 0 30px; height: 30px; border-radius: 10px;
@@ -137,19 +137,23 @@ p { color: var(--muted); line-height: 1.55; }
 .track .ship-dot { position: absolute; top: 50%; transform: translate(-50%, -50%); transition: left .6s ease; }
 
 .table-wrap { overflow-x: auto; border-radius: 12px; }
-table.table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-table.table th, table.table td { padding: 10px 8px; border-bottom: 1px solid rgba(148,163,255,.18); text-align: left; white-space: nowrap; }
+table.table { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-size: 0.92rem; }
+table.table th, table.table td { padding: 12px 10px; text-align: left; white-space: nowrap; }
+table.table tbody tr { background: rgba(6,10,40,.35); }
+table.table tbody tr td:first-child { border-radius: 10px 0 0 10px; }
+table.table tbody tr td:last-child { border-radius: 0 10px 10px 0; }
 table.table th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: .06em; }
 
-.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .space-between { justify-content: space-between; }
-.mt { margin-top: 12px; }
+.mt { margin-top: 16px; }
 .center { text-align: center; }
 .stars-note { font-size: .8rem; color: var(--muted); }
 
-.color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-.color-btn { height: 46px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; }
+.color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 6px; }
+.color-btn { height: 52px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; font-weight: 800; color: #0a1030; }
 .color-btn[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
+.color-btn.taken { background: rgba(255,255,255,.08); border-color: rgba(148,163,255,.25); color: var(--muted); cursor: not-allowed; opacity: .7; }
 
 .hero { text-align: center; padding: 18px 6px 6px; }
 .hero h1 { font-size: clamp(2rem, 7vw, 3.2rem); letter-spacing: .5px; }
@@ -177,9 +181,10 @@ table.table th { color: var(--muted); font-size: 0.78rem; text-transform: upperc
 .footer { margin-top: 26px; text-align: center; color: var(--muted); font-size: 0.82rem; }
 
 @media (max-width: 420px) {
-  .app-shell { padding: 12px 10px 40px; }
-  .card { padding: 14px; }
+  .app-shell { padding: 16px 12px 48px; }
+  .card { padding: 18px 16px; }
   .btn { font-size: 1.02rem; }
+  .table-wrap { margin: 0 -4px; }
 }
 
 /* ============ Interruptor (avance automático) ============ */
@@ -232,10 +237,10 @@ table.table th { color: var(--muted); font-size: 0.78rem; text-transform: upperc
 /* ============ Barra superior de carrera ============ */
 .race-topbar {
   position: sticky; top: 0; z-index: 5;
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background: rgba(10,16,48,.82); backdrop-filter: blur(8px);
   border: 1px solid rgba(148,163,255,.22); border-radius: 14px;
-  padding: 8px 12px; margin-bottom: 12px;
+  padding: 10px 14px; margin-bottom: 16px;
 }
 .race-brand { font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
 .race-clock { font-variant-numeric: tabular-nums; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
@@ -300,6 +305,21 @@ table.table th { color: var(--muted); font-size: 0.78rem; text-transform: upperc
 }
 .track-flag { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 1.2rem; }
 .ship-dot { transition: left .8s cubic-bezier(.2,.8,.2,1); }
+
+/* Pista con todas las naves hacia la meta (una calle por equipo) */
+.race-lanes { display: grid; gap: 12px; margin-top: 14px; }
+.lane {
+  display: grid; gap: 8px; padding: 12px 14px 14px;
+  border: 1px solid rgba(148,163,255,.18); border-radius: 14px;
+  background: rgba(6,10,40,.45);
+}
+.lane.me { border-color: rgba(232,176,159,.55); background: rgba(232,176,159,.07); }
+.lane-head { display: flex; align-items: center; gap: 10px; }
+.lane-pos { font-weight: 800; color: var(--muted); min-width: 26px; }
+.lane.me .lane-pos { color: var(--coral-strong); }
+.lane-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lane-track { height: 44px; }
+.lane-track .ship-dot svg { display: block; }
 .ship-go { animation: shipGo .8s ease; }
 @keyframes shipGo { 0% { transform: translate(-50%,-50%) scale(1); } 40% { transform: translate(-30%,-60%) scale(1.12); } 100% { transform: translate(-50%,-50%) scale(1); } }
 table.leaderboard tr.me { background: rgba(232,176,159,.12); }

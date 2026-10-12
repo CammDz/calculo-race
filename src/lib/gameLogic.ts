@@ -225,6 +225,26 @@ export function checkQuestionIntegrity(q: Question): string[] {
   return errors;
 }
 
+/** Normaliza un color hexadecimal para comparar (insensible a caso/espacios). */
+export function normalizeColor(color: unknown): string {
+  return String(color ?? '').trim().toLowerCase();
+}
+
+/** Indica si un color de nave ya está en uso por otro equipo de la partida. */
+export function isColorTaken(color: unknown, takenColors: unknown[]): boolean {
+  const c = normalizeColor(color);
+  if (!c) return false;
+  return takenColors.some((t) => normalizeColor(t) === c);
+}
+
+/** Primer color libre de la paleta, o null si todos están en uso. */
+export function firstFreeColor(palette: readonly string[], takenColors: unknown[]): string | null {
+  for (const c of palette) {
+    if (!isColorTaken(c, takenColors)) return c;
+  }
+  return null;
+}
+
 // ---------- Cambio de nivel ----------
 
 /** Decide qué pregunta publicar al iniciar un nivel.
