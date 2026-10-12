@@ -7,7 +7,7 @@ import {
   sortLeaderboard, generateRoomCode, validateTeamName, validateRoomCode,
   seededShuffle, isAnswerWindowOpen, secondsRemainingInPhase, shipProgress,
   MATCH_TOTAL_SEC, basePointsForLevel, presentQuestion, questionIdForLevelStart,
-  isColorTaken, firstFreeColor,
+  isColorTaken, firstFreeColor, parseTeamCount,
 } from '../lib/gameLogic';
 import { QUESTIONS, questionsByLevel } from '../data/questions';
 
@@ -253,5 +253,27 @@ describe('colores de nave únicos por partida', () => {
   });
   it('null cuando todos los colores están en uso', () => {
     expect(firstFreeColor(palette, [...palette])).toBeNull();
+  });
+});
+
+describe('número de equipos (2–10)', () => {
+  it('acepta 2, 3, 4… hasta 10 tal como se escriben', () => {
+    expect(parseTeamCount('2')).toBe(2);
+    expect(parseTeamCount('3')).toBe(3);
+    expect(parseTeamCount('4')).toBe(4);
+    expect(parseTeamCount('10')).toBe(10);
+  });
+  it('rechaza vacío, letras, 1 y 11', () => {
+    expect(parseTeamCount('')).toBeNull();
+    expect(parseTeamCount('abc')).toBeNull();
+    expect(parseTeamCount('1')).toBeNull();
+    expect(parseTeamCount('11')).toBeNull();
+  });
+  it('no recorta mientras se escribe el 10 (el "1" intermedio es válido escribirlo)', () => {
+    // El campo guarda texto libre; solo al confirmar se valida el rango.
+    let text = '';
+    for (const ch of '10') text = (text + ch).replace(/[^0-9]/g, '').slice(0, 2);
+    expect(text).toBe('10');
+    expect(parseTeamCount(text)).toBe(10);
   });
 });

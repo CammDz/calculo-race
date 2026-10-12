@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Plus, LogOut, History, PlayCircle, Copy } from 'lucide-react';
 import { useTeacherAuth } from '../hooks/useTeacherAuth';
 import { createGame, listTeacherGames } from '../services/gameService';
+import { parseTeamCount } from '../lib/gameLogic';
 import type { Game, LevelNumber } from '../types';
 
 export function TeacherDashboardPage() {
@@ -11,7 +12,7 @@ export function TeacherDashboardPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [maxTeams, setMaxTeams] = useState(8);
+  const [maxTeamsText, setMaxTeamsText] = useState('8');
   const [points, setPoints] = useState<Record<LevelNumber, number>>({ 1: 100, 2: 150, 3: 200, 4: 300 });
   const [showExp, setShowExp] = useState(true);
   const [autoAdv, setAutoAdv] = useState(false);
@@ -33,6 +34,12 @@ export function TeacherDashboardPage() {
     setBusy(true);
     setError(null);
     try {
+      const maxTeams = parseTeamCount(maxTeamsText);
+      if (maxTeams == null) {
+        setError('El número de equipos debe ser un entero entre 2 y 10.');
+        setBusy(false);
+        return;
+      }
       const g = await createGame({ maxTeams, points, showExplanations: showExp, teacherId: user.id, autoAdvance: autoAdv });
       navigate(`/admin/partida/${g.id}`);
     } catch (err) {
@@ -77,8 +84,48 @@ export function TeacherDashboardPage() {
         <form onSubmit={onCreate} className="mt">
           <h3><Plus size={18} /> Nueva partida (2–10 equipos)</h3>
           <div className="field">
-            <label htmlFor="max">Máximo de equipos</label>
-            <input id="max" className="input" type="number" min={2} max={10} value={maxTeams} onChange={(e) => setMaxTeams(Math.max(2, Math.min(10, Number(e.target.value))))} />
+            <label htmlFor="max">Máximo de equipos (2–10)</label>
+            <div className="row">
+              <button
+                type="button"
+                className="btn secondary small stepper"
+                aria-label="Quitar un equipo"
+                disabled={busy || (parseTeamCount(maxTeamsText) ?? 8) <= 2}
+                onClick={() => setMaxTeamsText(String((parseTeamCount(maxTeamsText) ?? 8) - 1))}
+              >
+                −
+              </button>
+              <input
+                id="max"
+                className="input stepper-input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={2}
+                value={maxTeamsText}
+                placeholder="8"
+                aria-describedby="max-hint"
+                onChange={(e) => setMaxTeamsText(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                onBlur={() => {
+                  // Al salir, si quedó vacío o fuera de rango, vuelve a 8.
+                  if (parseTeamCount(maxTeamsText) == null && maxTeamsText.trim() !== '') {
+                    setMaxTeamsText('8');
+                  } else if (maxTeamsText.trim() === '') {
+                    setMaxTeamsText('8');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="btn secondary small stepper"
+                aria-label="Agregar un equipo"
+                disabled={busy || (parseTeamCount(maxTeamsText) ?? 8) >= 10}
+                onClick={() => setMaxTeamsText(String((parseTeamCount(maxTeamsText) ?? 8) + 1))}
+              >
+                +
+              </button>
+            </div>
+            <span className="hint" id="max-hint">Escribe 2, 3, 4… hasta 10, o usa −/+.</span>
           </div>
           <div className="grid two">
             {([1, 2, 3, 4] as LevelNumber[]).map((l) => (

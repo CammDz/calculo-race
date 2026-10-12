@@ -155,6 +155,10 @@ table.table th { color: var(--muted); font-size: 0.78rem; text-transform: upperc
 .color-btn[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
 .color-btn.taken { background: rgba(255,255,255,.08); border-color: rgba(148,163,255,.25); color: var(--muted); cursor: not-allowed; opacity: .7; }
 
+/* Control de número de equipos: botones −/+ táctiles + campo libre */
+.stepper { width: 56px; flex: 0 0 auto; font-size: 1.4rem; }
+.stepper-input { max-width: 110px; text-align: center; font-weight: 800; font-size: 1.2rem; }
+
 .hero { text-align: center; padding: 18px 6px 6px; }
 .hero h1 { font-size: clamp(2rem, 7vw, 3.2rem); letter-spacing: .5px; }
 .hero h1 span { color: var(--coral); }

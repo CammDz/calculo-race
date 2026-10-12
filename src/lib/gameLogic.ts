@@ -245,6 +245,16 @@ export function firstFreeColor(palette: readonly string[], takenColors: unknown[
   return null;
 }
 
+/** Valida el número de equipos escrito (2–10). Acepta texto libre mientras se
+ *  escribe; solo al confirmar se exige un entero dentro del rango. */
+export function parseTeamCount(text: unknown, min = 2, max = 10): number | null {
+  const s = String(text ?? '').trim();
+  if (!/^\d+$/.test(s)) return null;
+  const n = Math.round(Number(s));
+  if (!Number.isFinite(n) || n < min || n > max) return null;
+  return n;
+}
+
 // ---------- Cambio de nivel ----------
 
 /** Decide qué pregunta publicar al iniciar un nivel.
