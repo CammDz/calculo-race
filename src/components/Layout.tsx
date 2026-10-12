@@ -18,7 +18,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
       <main>{children}</main>
       <footer className="footer">
-        Cálculo Race · Juego educativo de cálculo multivariable · 15:00 por partida
+        Calculo Race | C. Multivariable A251 | UTS
       </footer>
     </div>
   );
