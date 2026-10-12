@@ -9,7 +9,7 @@ import { Clock } from '../components/Hud';
 import { Leaderboard } from '../components/Leaderboard';
 import { RoomQr } from '../components/RoomQr';
 import { PolarPlot } from '../components/PolarPlot';
-import { matchRemaining, secondsRemainingInPhase, phaseForElapsed, levelForElapsed, formatClock, autoAdvanceStatus } from '../lib/gameLogic';
+import { matchRemaining, secondsRemainingInPhase, phaseForElapsed, levelForElapsed, formatClock, autoAdvanceStatus, questionIdForLevelStart } from '../lib/gameLogic';
 import { downloadCsv } from '../lib/utils';
 import type { GameStatus, Question } from '../types';
 
@@ -47,17 +47,26 @@ export function TeacherControlPage() {
   }, [live.game?.currentQuestionId]);
 
   // Avance automático de fases por cronómetro oficial (profesor como árbitro).
+  // Al cambiar de nivel se publica la primera pregunta del nivel nuevo: sin
+  // esto, la pregunta (y las respuestas registradas) del nivel anterior
+  // seguiría en pantalla al entrar al siguiente nivel.
   useEffect(() => {
     if (!live.game || busy) return;
     const expected = live.game.status === 'paused' || live.game.status === 'finished' ? null : phaseForElapsed(Math.min(elapsed, 900));
     if (expected && expected !== live.game.status && live.game.status !== 'paused') {
-      const patch: Partial<typeof live.game> = { status: expected, elapsedSec: elapsed, currentLevel: levelForElapsed(Math.min(elapsed, 899)) };
+      const newLevel = levelForElapsed(Math.min(elapsed, 899));
+      const patch: Partial<typeof live.game> = { status: expected, elapsedSec: elapsed, currentLevel: newLevel };
       if (expected.startsWith('level_')) {
-        const lvl = Number(expected.split('_')[1]);
-        const pool = questionsByLevel(lvl as 1 | 2 | 3 | 4);
-        const pick = pool[Math.floor(elapsed / 45) % pool.length];
-        if (pick && live.game.currentQuestionId == null) {
-          patch.currentQuestionId = pick.id;
+        const lvl = Number(expected.split('_')[1]) as 1 | 2 | 3 | 4;
+        const pool = questionsByLevel(lvl);
+        const publishId = questionIdForLevelStart({
+          currentLevel: live.game.currentLevel,
+          newLevel,
+          currentQuestionId: live.game.currentQuestionId,
+          poolIds: pool.map((q) => q.id),
+        });
+        if (publishId) {
+          patch.currentQuestionId = publishId;
           patch.questionOpenedAt = new Date(serverNow).toISOString();
           patch.questionClosesAt = new Date(serverNow + 60_000).toISOString();
         }

@@ -6,7 +6,7 @@ import {
   pointsForAnswer, speedBonus, phaseForElapsed, computeElapsedSec,
   sortLeaderboard, generateRoomCode, validateTeamName, validateRoomCode,
   seededShuffle, isAnswerWindowOpen, secondsRemainingInPhase, shipProgress,
-  MATCH_TOTAL_SEC, basePointsForLevel, presentQuestion,
+  MATCH_TOTAL_SEC, basePointsForLevel, presentQuestion, questionIdForLevelStart,
 } from '../lib/gameLogic';
 import { QUESTIONS, questionsByLevel } from '../data/questions';
 
@@ -201,5 +201,40 @@ describe('progreso de nave', () => {
     expect(shipProgress(0)).toBe(0);
     expect(shipProgress(10000)).toBe(1);
     expect(shipProgress(1000, 2000)).toBe(0.5);
+  });
+});
+
+describe('cambio de nivel publica pregunta nueva', () => {
+  const pool = ['n2-01', 'n2-02', 'n2-03'];
+  it('al pasar de nivel 1 a 2 publica la primera del nivel 2', () => {
+    expect(questionIdForLevelStart({
+      currentLevel: 1, newLevel: 2, currentQuestionId: 'n1-11', poolIds: pool,
+    })).toBe('n2-01');
+  });
+  it('sin pregunta publicada publica la primera del nivel', () => {
+    expect(questionIdForLevelStart({
+      currentLevel: 2, newLevel: 2, currentQuestionId: null, poolIds: pool,
+    })).toBe('n2-01');
+  });
+  it('en el mismo nivel con pregunta activa conserva la actual (null)', () => {
+    expect(questionIdForLevelStart({
+      currentLevel: 2, newLevel: 2, currentQuestionId: 'n2-05', poolIds: pool,
+    })).toBeNull();
+  });
+  it('sin preguntas en el nivel no publica nada', () => {
+    expect(questionIdForLevelStart({
+      currentLevel: 1, newLevel: 2, currentQuestionId: 'n1-11', poolIds: [],
+    })).toBeNull();
+  });
+  it('la pregunta publicada pertenece al nivel nuevo, no al anterior', () => {
+    const id = questionIdForLevelStart({
+      currentLevel: 1, newLevel: 2, currentQuestionId: 'n1-03', poolIds: pool,
+    });
+    expect(id).not.toBe('n1-03');
+    expect(pool).toContain(id);
+    // Las respuestas se filtran por pregunta: al cambiar el id, las del
+    // nivel anterior dejan de mostrarse en estudiante y profesor.
+    const oldAnswers = [{ questionId: 'n1-03', teamId: 't1' }];
+    expect(oldAnswers.filter((a) => a.questionId === id)).toHaveLength(0);
   });
 });

@@ -225,6 +225,26 @@ export function checkQuestionIntegrity(q: Question): string[] {
   return errors;
 }
 
+// ---------- Cambio de nivel ----------
+
+/** Decide qué pregunta publicar al iniciar un nivel.
+ *  Si no hay pregunta publicada o el nivel cambió, publica la primera del
+ *  nuevo nivel con marcas de tiempo frescas; si no, conserva la actual (null).
+ *  Así, al pasar de nivel nunca se sigue mostrando la pregunta (ni las
+ *  respuestas registradas) del nivel anterior.
+ */
+export function questionIdForLevelStart(params: {
+  currentLevel: LevelNumber;
+  newLevel: LevelNumber;
+  currentQuestionId: string | null;
+  poolIds: string[];
+}): string | null {
+  if (params.poolIds.length === 0) return null;
+  if (params.currentQuestionId == null) return params.poolIds[0];
+  if (params.currentLevel !== params.newLevel) return params.poolIds[0];
+  return null;
+}
+
 // ---------- Avance automático ----------
 
 /** Equipos participantes de una pregunta: los creados antes de su apertura.
