@@ -172,25 +172,27 @@ describe('banco de preguntas', () => {
   });
 });
 
-describe('presentación aleatoria por partida', () => {
+describe('presentación con orden fijo por partida', () => {
   const q = QUESTIONS.find((x) => x.id === 'n1-01')!;
-  it('misma semilla = mismo orden para todos los equipos', () => {
+  it('misma semilla = mismo orden fijo para todos los equipos', () => {
     const a = presentQuestion(q, 'sala-X:n1-01').options.map((o) => o.id);
     const b = presentQuestion(q, 'sala-X:n1-01').options.map((o) => o.id);
     expect(a).toEqual(b);
+    expect(a).toEqual(['A', 'B', 'C', 'D']);
   });
   it('conserva IDs y respuesta correcta (valida el servidor igual)', () => {
     const p = presentQuestion(q, 'sala-Y:n1-01');
-    expect(p.options.map((o) => o.id).sort()).toEqual(['A', 'B', 'C', 'D']);
+    expect(p.options.map((o) => o.id)).toEqual(['A', 'B', 'C', 'D']);
     expect(p.correctOptionId).toBe(q.correctOptionId);
     expect(p.options.find((o) => o.id === p.correctOptionId)?.text)
       .toBe(q.options.find((o) => o.id === q.correctOptionId)?.text);
   });
-  it('el orden varía entre partidas', () => {
+  it('el orden NO varía entre partidas (fijo A,B,C,D)', () => {
     const orders = new Set(
       ['g1', 'g2', 'g3', 'g4', 'g5'].map((g) => presentQuestion(q, `${g}:n1-01`).options.map((o) => o.id).join('')),
     );
-    expect(orders.size).toBeGreaterThan(1);
+    expect(orders.size).toBe(1);
+    expect([...orders][0]).toBe('ABCD');
   });
 });
 

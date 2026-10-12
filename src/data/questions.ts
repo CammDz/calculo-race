@@ -1,7 +1,13 @@
 // Banco inicial verificado de 44 preguntas (11 por nivel).
 // Todas tienen 4 opciones, una única correcta y explicación.
 // Revisadas matemáticamente. Nivel 2 incluye ejemplo canónico r = 2+2cos θ.
-// Letras correctas balanceadas (A/B/C/D) y orden de opciones aleatorio por partida.
+// Letras correctas balanceadas (A/B/C/D) y ORDEN FIJO de opciones A,B,C,D.
+// REGLA OBLIGATORIA: las opciones NUNCA se mezclan al presentarlas. Cada opción
+// tiene un identificador estable (A,B,C,D) independiente de su posición visual;
+// como el orden visual es siempre A,B,C,D, la letra coincide entre el banco
+// local, la base de datos (tabla questions), el servidor (Edge Function),
+// el panel del profesor y el estudiante. La validación compara identificadores
+// con validateAnswer() y la BD es la autoridad definitiva.
 
 import type { Question } from '../types';
 
@@ -286,7 +292,7 @@ export const QUESTIONS: Question[] = [
       { id: "D", text: "lim(x→0) sin(x)/x" }
     ],
     correctOptionId: "D",
-    explanation: "Solo B es 0/0. Las demás son de la forma a/0 (a≠0), no indeterminadas: L'Hôpital no aplica directamente.",
+    explanation: "Solo sin(x)/x es 0/0 (sin(0)=0). Las demás son de la forma a/0 (a≠0), no indeterminadas: L'Hôpital no aplica directamente.",
   },
   {
     id: "n3-02", level: 3, topic: "Aplicación directa", difficulty: "facil", active: true,
@@ -370,7 +376,7 @@ export const QUESTIONS: Question[] = [
       { id: "D", text: "−1" }
     ],
     correctOptionId: "C",
-    explanation: "Derivando: sec²(x)/1 → 1. (La opción D vale 1 numéricamente pero no es el procedimiento del límite.)",
+    explanation: "Derivando: sec²(x)/1 → sec²(0) = 1. También: tan(x) ~ x cerca de 0.",
   },
   {
     id: "n3-09", level: 3, topic: "∞/∞ con exponencial", difficulty: "dificil", active: true,

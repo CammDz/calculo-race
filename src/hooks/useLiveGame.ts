@@ -76,8 +76,10 @@ export function useLiveGame(gameId: string | null): LiveState {
         if (cancelled) return;
         setGame(g); setTeams(t); setLeaderboard(lb); setAnswers(a);
         const raw = await publicQuestion(g?.currentQuestionId ?? null);
-        // Orden aleatorio por partida, idéntico para todos los equipos.
-        setQuestion(raw && g ? presentQuestion(raw, `${gameId}:${raw.id}`) : raw);
+        // ORDEN FIJO A,B,C,D para todos los equipos (sin mezclar).
+        // La reconexión recupera la misma pregunta desde la BD: mismo orden,
+        // mismos identificadores estables y misma respuesta correcta en servidor.
+        setQuestion(raw ? presentQuestion(raw) : raw);
         setError(null);
       } catch (e) {
         if (!cancelled && firstLoad.current) setError(e instanceof Error ? e.message : 'Error de conexión.');

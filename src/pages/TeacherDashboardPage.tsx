@@ -14,6 +14,7 @@ export function TeacherDashboardPage() {
   const [maxTeams, setMaxTeams] = useState(8);
   const [points, setPoints] = useState<Record<LevelNumber, number>>({ 1: 100, 2: 150, 3: 200, 4: 300 });
   const [showExp, setShowExp] = useState(true);
+  const [autoAdv, setAutoAdv] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate('/admin');
@@ -32,7 +33,7 @@ export function TeacherDashboardPage() {
     setBusy(true);
     setError(null);
     try {
-      const g = await createGame({ maxTeams, points, showExplanations: showExp, teacherId: user.id });
+      const g = await createGame({ maxTeams, points, showExplanations: showExp, teacherId: user.id, autoAdvance: autoAdv });
       navigate(`/admin/partida/${g.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear la partida.');
@@ -52,6 +53,8 @@ export function TeacherDashboardPage() {
         points: { 1: g.pointsL1, 2: g.pointsL2, 3: g.pointsL3, 4: g.pointsL4 },
         showExplanations: g.showExplanations,
         teacherId: user.id,
+        autoAdvance: g.autoAdvance,
+        autoAdvanceDelaySec: g.autoAdvanceDelaySec,
       });
       navigate(`/admin/partida/${fresh.id}`);
     } catch (err) {
@@ -86,6 +89,7 @@ export function TeacherDashboardPage() {
             ))}
           </div>
           <label className="row"><input type="checkbox" checked={showExp} onChange={(e) => setShowExp(e.target.checked)} /> Mostrar explicaciones a estudiantes</label>
+          <label className="row"><input type="checkbox" checked={autoAdv} onChange={(e) => setAutoAdv(e.target.checked)} /> Avanzar automáticamente cuando todos respondan</label>
           {error && <div className="error mt">{error}</div>}
           <button className="btn mt" disabled={busy} type="submit"><PlayCircle size={18} /> {busy ? 'Creando…' : 'Crear partida y obtener código'}</button>
         </form>

@@ -148,7 +148,11 @@ export function formatClock(totalSec: number): string {
   return `${mm}:${ss}`;
 }
 
-/** Mezcla determinista por sala+ronda para que todos los equipos vean el mismo orden. */
+/** Mezcla determinista por sala+ronda para que todos los equipos vean el mismo orden.
+ *  @deprecated HISTÓRICO: se conserva solo por compatibilidad con pruebas viejas.
+ *  El juego actual usa ORDEN FIJO A,B,C,D (ver presentQuestion/sortOptionsFixed).
+ *  No usar para presentar preguntas a estudiantes.
+ */
 export function seededShuffle<T>(items: T[], seed: string): T[] {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) {
@@ -170,10 +174,100 @@ export function isAnswerWindowOpen(nowServerMs: number, closesAt: string | null)
   return nowServerMs < Date.parse(closesAt);
 }
 
-/** Presenta una pregunta con las opciones en orden aleatorio determinista por
- *  partida (misma semilla = mismo orden para todos los equipos).
- *  Los IDs A/B/C/D viajan con su texto: la validación del servidor no cambia.
+/** Presenta una pregunta SIEMPRE en orden fijo A,B,C,D.
+ *  El orden visual nunca se mezcla: la letra es un identificador estable que viaja
+ *  con su texto y coincide entre banco local, base de datos, servidor, profesor
+ *  y estudiante. El parámetro `seed` se ignora y se conserva solo por
+ *  compatibilidad con llamadas antiguas.
  */
-export function presentQuestion(q: Question, seed: string): Question {
-  return { ...q, options: seededShuffle(q.options, seed) };
+export function presentQuestion(q: Question, _seed?: string): Question {
+  return { ...q, options: sortOptionsFixed(q.options) };
+}
+
+/** Ordena opciones por su identificador estable A,B,C,D. */
+export function sortOptionsFixed<T extends { id: string }>(options: T[]): T[] {
+  const rank: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
+  return [...options].sort((a, b) => (rank[a.id] ?? 99) - (rank[b.id] ?? 99));
+}
+
+/** Normaliza un identificador de opción (letra A-D, insensible a caso/espacios). */
+export function normalizeOptionId(id: unknown): string {
+  return String(id ?? '').trim().toUpperCase();
+}
+
+/** ÚNICA función de validación de respuestas (fuente de verdad compartida).
+ *  Compara el identificador estable de la opción seleccionada con el identificador
+ *  de la opción correcta guardado para la pregunta. El servidor (Edge Function)
+ *  es la autoridad definitiva; el frontend solo la usa para pruebas y nunca para
+ *  otorgar puntos por su cuenta.
+ */
+export function validateAnswer(selectedOptionId: unknown, correctOptionId: unknown): boolean {
+  const sel = normalizeOptionId(selectedOptionId);
+  const corr = normalizeOptionId(correctOptionId);
+  if (!['A', 'B', 'C', 'D'].includes(sel)) return false;
+  if (!['A', 'B', 'C', 'D'].includes(corr)) return false;
+  return sel === corr;
+}
+
+/** Verifica la integridad de una pregunta: 4 opciones distintas y una única correcta. */
+export function checkQuestionIntegrity(q: Question): string[] {
+  const errors: string[] = [];
+  if (q.options.length !== 4) errors.push(`pregunta ${q.id}: debe tener 4 opciones`);
+  const ids = q.options.map((o) => normalizeOptionId(o.id)).sort();
+  if (JSON.stringify(ids) !== JSON.stringify(['A', 'B', 'C', 'D'])) {
+    errors.push(`pregunta ${q.id}: ids deben ser A,B,C,D`);
+  }
+  const texts = q.options.map((o) => o.text.trim());
+  if (new Set(texts).size !== texts.length) errors.push(`pregunta ${q.id}: opciones duplicadas`);
+  if (!q.options.some((o) => normalizeOptionId(o.id) === normalizeOptionId(q.correctOptionId))) {
+    errors.push(`pregunta ${q.id}: correctOptionId no coincide con ninguna opción`);
+  }
+  return errors;
+}
+
+// ---------- Avance automático ----------
+
+/** Equipos participantes de una pregunta: los creados antes de su apertura.
+ *  Un equipo que se unió después de abrir la pregunta no bloquea el avance.
+ *  Un equipo desconectado después de abrir conserva su participación (no provoca
+ *  un avance prematuro: el temporizador sigue siendo el respaldo).
+ */
+export function participantsForQuestion<T extends { id: string; createdAt?: string }>(
+  teams: T[],
+  questionOpenedAt: string | null,
+): T[] {
+  if (!questionOpenedAt) return [...teams];
+  const opened = Date.parse(questionOpenedAt);
+  if (Number.isNaN(opened)) return [...teams];
+  return teams.filter((t) => {
+    if (!t.createdAt) return true;
+    const c = Date.parse(t.createdAt);
+    if (Number.isNaN(c)) return true;
+    return c <= opened + 1000; // 1 s de tolerancia por relojes
+  });
+}
+
+export interface AutoAdvanceState {
+  autoAdvance: boolean;
+  answeredCount: number;
+  participantCount: number;
+  allAnswered: boolean;
+}
+
+/** Calcula si se cumple "todos respondieron" para cerrar y avanzar. */
+export function autoAdvanceStatus(params: {
+  autoAdvance: boolean;
+  participantTeamIds: string[];
+  answeredTeamIds: string[];
+}): AutoAdvanceState {
+  const participants = [...new Set(params.participantTeamIds)];
+  const answered = new Set(params.answeredTeamIds);
+  const answeredCount = participants.filter((id) => answered.has(id)).length;
+  const allAnswered = participants.length > 0 && answeredCount >= participants.length;
+  return {
+    autoAdvance: params.autoAdvance,
+    answeredCount,
+    participantCount: participants.length,
+    allAnswered: params.autoAdvance && allAnswered,
+  };
 }

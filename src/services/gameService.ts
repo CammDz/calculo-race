@@ -3,7 +3,7 @@
 // valida la respuesta y calcula la puntuación en el servidor.
 
 import { requireSupabase } from '../lib/supabase';
-import { generateRoomCode, sortLeaderboard } from '../lib/gameLogic';
+import { generateRoomCode, sortLeaderboard, sortOptionsFixed } from '../lib/gameLogic';
 import { getQuestionById, QUESTIONS } from '../data/questions';
 import type { Answer, Game, GameStatus, LeaderboardEntry, LevelNumber, Question, Team } from '../types';
 
@@ -14,6 +14,8 @@ export interface CreateGameParams {
   points: Record<LevelNumber, number>;
   showExplanations: boolean;
   teacherId?: string | null;
+  autoAdvance?: boolean;
+  autoAdvanceDelaySec?: number;
 }
 
 export async function createGame(params: CreateGameParams): Promise<Game> {
@@ -25,6 +27,8 @@ export async function createGame(params: CreateGameParams): Promise<Game> {
     current_level: 1, points_l1: params.points[1], points_l2: params.points[2],
     points_l3: params.points[3], points_l4: params.points[4],
     show_explanations: params.showExplanations,
+    auto_advance: params.autoAdvance ?? false,
+    auto_advance_delay_sec: params.autoAdvanceDelaySec ?? 2,
   }).select('*').single();
   if (error) throw new Error(mapSupabaseError(error));
   return rowToGame(data);
@@ -82,6 +86,10 @@ export interface SubmitResult {
   correct: boolean;
   points: number;
   alreadyAnswered: boolean;
+  /** true cuando esta respuesta completó a todos los participantes. */
+  allAnswered?: boolean;
+  /** true cuando el servidor inició el avance automático a la siguiente pregunta. */
+  autoAdvanced?: boolean;
 }
 
 /** Envía respuesta. Invoca la Edge Function (valida y puntúa en servidor). */
@@ -110,18 +118,44 @@ export async function buildLeaderboard(gameId: string): Promise<LeaderboardEntry
   })));
 }
 
-/** Preguntas visibles para estudiantes: SIN respuesta correcta (el servidor la oculta). */
+/** Preguntas visibles para estudiantes: SIN respuesta correcta (el servidor la oculta).
+ *  FUENTE ÚNICA: la base de datos (vista `public_questions`). El banco local solo
+ *  se usa como respaldo sin conexión y NUNCA aporta el correctOptionId al alumno.
+ *  Las opciones siempre se devuelven en orden fijo A,B,C,D (sin mezclar).
+ */
 export async function publicQuestion(questionId: string | null): Promise<Question | null> {
   if (!questionId) return null;
   const sb = requireSupabase();
   // La vista pública `public_questions` no expone correct_option_id.
   const { data, error } = await sb.from('public_questions').select('*').eq('id', questionId).maybeSingle();
-  if (error || !data) return getQuestionById(questionId) ?? null;
+  if (error || !data) return getQuestionById(questionId) ? { ...getQuestionById(questionId)!, correctOptionId: '', options: sortOptionsFixed(getQuestionById(questionId)!.options) } : null;
   const full = getQuestionById(questionId);
   return {
     id: data.id, level: data.level, topic: data.topic, difficulty: data.difficulty,
-    statement: data.statement, options: data.options, correctOptionId: full?.correctOptionId ?? '',
+    statement: data.statement, options: sortOptionsFixed(data.options as Question['options']),
+    // NUNCA exponer la correcta al estudiante antes del cierre.
+    correctOptionId: '',
     explanation: full?.explanation ?? data.explanation ?? '', active: true,
+  };
+}
+
+/** Pregunta completa para el PROFESOR, con la respuesta correcta REAL de la BD.
+ *  El panel del profesor y el servidor usan estos mismos datos: si difieren del
+ *  banco local, la BD manda (y hay que resincronizar el banco, no al revés).
+ */
+export async function adminGetQuestion(questionId: string | null): Promise<Question | null> {
+  if (!questionId) return null;
+  const sb = requireSupabase();
+  const { data, error } = await sb.from('questions').select('*').eq('id', questionId).maybeSingle();
+  if (error || !data) return getQuestionById(questionId) ?? null;
+  return {
+    id: String(data.id), level: Number(data.level) as LevelNumber,
+    topic: String(data.topic), difficulty: data.difficulty as Question['difficulty'],
+    statement: String(data.statement),
+    options: sortOptionsFixed(data.options as Question['options']),
+    correctOptionId: String(data.correct_option_id),
+    explanation: String(data.explanation ?? ''),
+    active: Boolean(data.active ?? true),
   };
 }
 
@@ -134,7 +168,7 @@ export async function adminListQuestions(): Promise<Question[]> {
     id: String(r['id']), level: Number(r['level']) as LevelNumber,
     topic: String(r['topic']), difficulty: r['difficulty'] as Question['difficulty'],
     statement: String(r['statement']),
-    options: r['options'] as Question['options'],
+    options: sortOptionsFixed(r['options'] as Question['options']),
     correctOptionId: String(r['correct_option_id']),
     explanation: String(r['explanation'] ?? ''), active: Boolean(r['active'] ?? true),
   }));
@@ -157,6 +191,8 @@ function rowToGame(r: Record<string, unknown>): Game {
     showExplanations: Boolean(r['show_explanations'] ?? true),
     questionOpenedAt: (r['question_opened_at'] as string) ?? null,
     questionClosesAt: (r['question_closes_at'] as string) ?? null,
+    autoAdvance: Boolean(r['auto_advance'] ?? false),
+    autoAdvanceDelaySec: Number(r['auto_advance_delay_sec'] ?? 2),
   };
 }
 
@@ -175,6 +211,8 @@ function gameToRow(g: Partial<Game>): Record<string, unknown> {
   if (g.showExplanations != null) row['show_explanations'] = g.showExplanations;
   if (g.questionOpenedAt !== undefined) row['question_opened_at'] = g.questionOpenedAt;
   if (g.questionClosesAt !== undefined) row['question_closes_at'] = g.questionClosesAt;
+  if (g.autoAdvance != null) row['auto_advance'] = g.autoAdvance;
+  if (g.autoAdvanceDelaySec != null) row['auto_advance_delay_sec'] = g.autoAdvanceDelaySec;
   return row;
 }
 

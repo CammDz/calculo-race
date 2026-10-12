@@ -73,6 +73,10 @@ export interface Game {
   showExplanations: boolean;
   questionOpenedAt: string | null;
   questionClosesAt: string | null;
+  /** Avance automático cuando todos los equipos participantes respondieron. */
+  autoAdvance: boolean;
+  /** Segundos de pausa para mostrar el resultado antes de publicar la siguiente. */
+  autoAdvanceDelaySec: number;
 }
 
 export interface Answer {

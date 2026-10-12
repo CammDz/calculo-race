@@ -1,22 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Play, Pause, Square, SkipForward, Download, Eye, EyeOff } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, Download, Eye, EyeOff, Zap } from 'lucide-react';
 import { useTeacherAuth } from '../hooks/useTeacherAuth';
 import { useLiveGame, useServerClock } from '../hooks/useLiveGame';
-import { updateGame } from '../services/gameService';
+import { updateGame, adminGetQuestion } from '../services/gameService';
 import { QUESTIONS, questionsByLevel } from '../data/questions';
 import { Clock } from '../components/Hud';
 import { Leaderboard } from '../components/Leaderboard';
 import { RoomQr } from '../components/RoomQr';
 import { PolarPlot } from '../components/PolarPlot';
-import { matchRemaining, secondsRemainingInPhase, phaseForElapsed, levelForElapsed, formatClock } from '../lib/gameLogic';
+import { matchRemaining, secondsRemainingInPhase, phaseForElapsed, levelForElapsed, formatClock, autoAdvanceStatus } from '../lib/gameLogic';
 import { downloadCsv } from '../lib/utils';
-import type { GameStatus } from '../types';
+import type { GameStatus, Question } from '../types';
 
 /** Control de partida: iniciar/pausar/reanudar/finalizar/avanzar pregunta.
  *  Pausa: congela elapsedSec (documentado). El límite total de 15:00 de
  *  competencia NO incluye el tiempo pausado; al reanudar continúa desde el
  *  estado guardado usando marcas del servidor.
+ *
+ *  FUENTE DE VERDAD: la respuesta correcta mostrada viene de la BASE DE DATOS
+ *  (adminGetQuestion), igual que la que valida el servidor. El banco local solo
+ *  es respaldo si la BD no responde.
  */
 export function TeacherControlPage() {
   const { gameId = '' } = useParams();
@@ -26,10 +30,21 @@ export function TeacherControlPage() {
   const { serverNow, elapsed } = useServerClock(live.game);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dbQuestion, setDbQuestion] = useState<Question | null>(null);
+  const autoTimer = useRef(0);
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/admin');
   }, [authLoading, user, navigate]);
+
+  // Pregunta completa desde la BD (respuesta correcta real del sistema).
+  useEffect(() => {
+    const qid = live.game?.currentQuestionId ?? null;
+    if (!qid) { setDbQuestion(null); return; }
+    let cancelled = false;
+    adminGetQuestion(qid).then((q) => { if (!cancelled) setDbQuestion(q); }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [live.game?.currentQuestionId]);
 
   // Avance automático de fases por cronómetro oficial (profesor como árbitro).
   useEffect(() => {
@@ -53,12 +68,28 @@ export function TeacherControlPage() {
   }, [elapsed]);
 
   const answeredCount = useMemo(() => {
-    if (!live.game?.currentQuestionId) return { ok: 0, total: live.teams.length };
+    if (!live.game?.currentQuestionId) return { ok: 0, total: live.teams.length, sent: 0 };
     const mine = live.answers.filter((a) => a.questionId === live.game?.currentQuestionId);
     return { ok: mine.filter((a) => a.isCorrect).length, total: live.teams.length, sent: mine.length };
   }, [live.answers, live.game?.currentQuestionId, live.teams.length]);
 
-  const correctId = QUESTIONS.find((x) => x.id === live.question?.id)?.correctOptionId ?? '';
+  // Progreso de avance automático: participantes = equipos presentes (el servidor
+  // excluye además a los que se unieron después de abrir la pregunta).
+  const advance = useMemo(() => {
+    const qid = live.game?.currentQuestionId;
+    if (!qid) return { answeredCount: 0, participantCount: live.teams.length, allAnswered: false };
+    const answeredTeamIds = live.answers.filter((a) => a.questionId === qid).map((a) => a.teamId);
+    return autoAdvanceStatus({
+      autoAdvance: !!live.game?.autoAdvance,
+      participantTeamIds: live.teams.map((t) => t.id),
+      answeredTeamIds,
+    });
+  }, [live.game?.currentQuestionId, live.game?.autoAdvance, live.answers, live.teams]);
+
+  // La correcta REAL es la de la BD; el banco local solo respalda sin conexión.
+  const localCorrect = QUESTIONS.find((x) => x.id === live.question?.id)?.correctOptionId ?? '';
+  const correctId = dbQuestion?.correctOptionId ?? localCorrect;
+  const bankMismatch = !!dbQuestion && !!localCorrect && dbQuestion.correctOptionId !== localCorrect;
 
   /** Respuesta de cada equipo a la pregunta actual, ordenada por nombre. */
   const teamAnswers = useMemo(() => {
@@ -94,6 +125,42 @@ export function TeacherControlPage() {
     }
   }
 
+  const doNextQuestion = (g: NonNullable<typeof live.game>) => {
+    const lvl = levelForElapsed(Math.min(elapsed, 899));
+    const pool = questionsByLevel(lvl);
+    const idx = pool.findIndex((q) => q.id === g.currentQuestionId);
+    const next = pool[(idx + 1) % pool.length] ?? QUESTIONS[0];
+    return updateGame(g.id, {
+      currentLevel: lvl,
+      currentQuestionId: next.id,
+      questionOpenedAt: new Date().toISOString(),
+      questionClosesAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+  };
+
+  // Respaldo en cliente del avance automático: el SERVIDOR (Edge Function) es la
+  // autoridad y normalmente ya avanzó; este temporizador solo cubre el modo
+  // local sin función desplegada. Es idempotente por pregunta (ref por qid).
+  const advancedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const g = live.game;
+    if (!g?.autoAdvance || !advance.allAnswered || !g.currentQuestionId) return;
+    if (advancedFor.current === g.currentQuestionId) return;
+    const delayMs = Math.max(1, Math.min(10, g.autoAdvanceDelaySec ?? 2)) * 1000;
+    window.clearTimeout(autoTimer.current);
+    autoTimer.current = window.setTimeout(() => {
+      if (advancedFor.current === g.currentQuestionId) return;
+      advancedFor.current = g.currentQuestionId;
+      doNextQuestion(g).then(() => live.reload()).catch(() => { advancedFor.current = null; });
+    }, delayMs);
+    return () => window.clearTimeout(autoTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [advance.allAnswered, live.game?.currentQuestionId, live.game?.autoAdvance]);
+
+  useEffect(() => {
+    advancedFor.current = null;
+  }, [live.game?.currentQuestionId]);
+
   if (authLoading || live.loading) return <section className="card"><p>Cargando control…</p></section>;
   if (!live.game) return <section className="card"><div className="error">{live.error ?? 'Partida no encontrada.'}</div></section>;
   const g = live.game;
@@ -122,20 +189,12 @@ export function TeacherControlPage() {
     act('finalizar', () => updateGame(g.id, { status: 'finished', elapsedSec: 900, serverStartedAt: null, questionClosesAt: new Date().toISOString() }));
 
   const nextQuestion = () =>
-    act('siguiente', () => {
-      const lvl = levelForElapsed(Math.min(elapsed, 899));
-      const pool = questionsByLevel(lvl);
-      const idx = pool.findIndex((q) => q.id === g.currentQuestionId);
-      const next = pool[(idx + 1) % pool.length] ?? QUESTIONS[0];
-      return updateGame(g.id, {
-        currentLevel: lvl,
-        currentQuestionId: next.id,
-        questionOpenedAt: new Date().toISOString(),
-        questionClosesAt: new Date(Date.now() + 60_000).toISOString(),
-      });
-    });
+    act('siguiente', () => doNextQuestion(g));
 
   const toggleExp = () => act('explicaciones', () => updateGame(g.id, { showExplanations: !g.showExplanations }));
+  const toggleAuto = () => act('autoavance', () => updateGame(g.id, { autoAdvance: !g.autoAdvance }));
+  const changeDelay = (v: number) =>
+    act('retardo', () => updateGame(g.id, { autoAdvanceDelaySec: Math.max(1, Math.min(10, Math.round(v) || 2)) }));
 
   return (
     <div className="grid">
@@ -158,6 +217,44 @@ export function TeacherControlPage() {
           <button className="btn ghost small" disabled={!!busy} onClick={toggleExp}>{g.showExplanations ? <EyeOff size={16} /> : <Eye size={16} />} Explicaciones: {g.showExplanations ? 'ON' : 'OFF'}</button>
           <button className="btn danger small" disabled={!!busy} onClick={finish}><Square size={16} /> {busy === 'finalizar' ? '…' : 'Finalizar'}</button>
         </div>
+        <div className="auto-advance mt" role="group" aria-label="Avance automático">
+          <label className="row" style={{ cursor: 'pointer' }}>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!g.autoAdvance}
+              aria-label="Avanzar automáticamente cuando todos respondan"
+              className={`switch ${g.autoAdvance ? 'on' : ''}`}
+              disabled={!!busy}
+              onClick={toggleAuto}
+            >
+              <span className="knob" />
+            </button>
+            <span><Zap size={16} /> <strong>Avanzar automáticamente cuando todos respondan</strong></span>
+          </label>
+          <div className="row mt">
+            <label htmlFor="auto-delay">Pausa tras cerrar (s):</label>
+            <input
+              id="auto-delay"
+              className="input"
+              type="number"
+              min={1}
+              max={10}
+              value={g.autoAdvanceDelaySec ?? 2}
+              disabled={!!busy || !g.autoAdvance}
+              onChange={(e) => changeDelay(Number(e.target.value))}
+              style={{ maxWidth: 90 }}
+            />
+            <span className="hint">Muestra el resultado {g.autoAdvanceDelaySec ?? 2} s y publica la siguiente.</span>
+          </div>
+          {g.currentQuestionId && (
+            <p className="hint" aria-live="polite">
+              Respuestas recibidas: {advance.answeredCount} de {advance.participantCount}
+              {advance.allAnswered && g.autoAdvance ? ' · ¡Todos respondieron! Preparando la siguiente pregunta…' : ''}
+              {!g.autoAdvance ? ' · (avance manual o por tiempo)' : ''}
+            </p>
+          )}
+        </div>
         <div className="mt"><RoomQr code={g.code} size={140} /></div>
       </section>
 
@@ -168,13 +265,16 @@ export function TeacherControlPage() {
             <p className="question-text">{live.question.statement}</p>
             {live.question.polarPlot && <PolarPlot kind={live.question.polarPlot.kind} label={live.question.polarPlot.label} />}
             <ul>
-              {live.question.options.map((o) => (
-                <li key={o.id} style={{ color: o.id === (QUESTIONS.find((x) => x.id === live.question?.id)?.correctOptionId ?? '') ? 'var(--green)' : 'var(--muted)' }}>
-                  {o.id}. {o.text} {o.id === (QUESTIONS.find((x) => x.id === live.question?.id)?.correctOptionId ?? '') ? '✓' : ''}
+              {(dbQuestion?.options ?? live.question.options).map((o) => (
+                <li key={o.id} style={{ color: o.id === correctId ? 'var(--green)' : 'var(--muted)' }}>
+                  {o.id}. {o.text} {o.id === correctId ? '✓' : ''}
                 </li>
               ))}
             </ul>
-            <p className="hint">Correctas/incorrectas en vivo: {answeredCount.ok} ✓ / {(answeredCount.sent ?? 0) - answeredCount.ok} ✗ de {answeredCount.sent} enviadas.</p>
+            <p className="hint">Correcta real (BD): {correctId || '—'} · Correctas/incorrectas en vivo: {answeredCount.ok} ✓ / {(answeredCount.sent ?? 0) - answeredCount.ok} ✗ de {answeredCount.sent} enviadas.</p>
+            {bankMismatch && (
+              <p className="error">El banco local dice {localCorrect} pero la BD dice {dbQuestion?.correctOptionId}. Se muestra la BD (autoridad). Resincroniza src/data/questions.ts.</p>
+            )}
           </>
         ) : <p className="hint">Sin pregunta publicada.</p>}
       </section>
